@@ -47,7 +47,7 @@
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
-    transition: transform .25s ease;
+    transition: transform .25s ease, width .25s ease, min-width .25s ease;
   }
 
   .sidebar-head {
@@ -72,6 +72,26 @@
     place-items: center;
     font-size: 17px;
   }
+
+  .brand-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .collapse-btn {
+    width: 26px;
+    height: 26px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0;
+  }
+  .collapse-btn:hover { color: var(--text); border-color: var(--accent); }
 
   .new-chat {
     margin-top: 14px;
@@ -475,11 +495,12 @@
     font-size: 17px;
     display: grid;
     place-items: center;
-    transition: opacity .15s, transform .05s;
+    transition: opacity .15s, transform .16s ease, box-shadow .16s ease;
   }
 
   .send-btn:disabled { opacity: .45; cursor: not-allowed; }
-  .send-btn:not(:disabled):active { transform: scale(.95); }
+  .send-btn:not(:disabled):hover { transform: translateY(-2px) scale(1.06); box-shadow: 0 6px 16px rgba(127, 94, 255, .35); }
+  .send-btn:not(:disabled):active { transform: translateY(0) scale(.94); }
   .send-btn.stop { background: var(--danger); }
 
   .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
@@ -489,13 +510,16 @@
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,.55);
-    display: none;
+    display: flex;
     align-items: center;
     justify-content: center;
     z-index: 50;
     padding: 20px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .2s ease, visibility .2s ease;
   }
-  .overlay.open { display: flex; }
+  .overlay.open { opacity: 1; visibility: visible; }
 
   .modal {
     width: 100%;
@@ -507,7 +531,11 @@
     border-radius: 16px;
     padding: 24px;
     box-shadow: var(--shadow);
+    opacity: 0;
+    transform: translateY(14px) scale(.97);
+    transition: opacity .22s ease, transform .22s ease;
   }
+  .overlay.open .modal { opacity: 1; transform: translateY(0) scale(1); }
 
   .modal h2 { margin: 0 0 18px; font-size: 19px; }
 
@@ -559,6 +587,18 @@
     outline: none;
   }
   .field input:focus, .field textarea:focus { border-color: var(--accent); }
+  .field select {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+  }
+  .field select:focus { border-color: var(--accent); }
   .field textarea { resize: vertical; min-height: 64px; }
 
   .field .range-row { display: flex; align-items: center; gap: 12px; }
@@ -614,6 +654,12 @@
     padding: 16px 14px 2px;
   }
 
+  .conv-hint {
+    margin: -6px 0 14px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
   .modal-actions {
     display: flex;
     gap: 10px;
@@ -635,8 +681,10 @@
     color: var(--text);
     cursor: pointer;
     font-size: 14px;
+    transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
   }
-  .btn:hover { border-color: var(--accent); }
+  .btn:hover { border-color: var(--accent); transform: translateY(-2px) scale(1.03); box-shadow: 0 6px 14px rgba(127, 94, 255, .25); }
+  .btn:active { transform: translateY(0) scale(.98); }
   .btn.primary {
     background: linear-gradient(135deg, var(--accent), var(--accent-2));
     border: none;
@@ -647,6 +695,16 @@
     border: none;
     color: var(--accent);
     padding: 10px 4px;
+  }
+
+  @media (min-width: 761px) {
+    .app.sidebar-hidden .sidebar {
+      width: 0;
+      min-width: 0;
+      border-right: none;
+      overflow: hidden;
+    }
+    .app.sidebar-hidden .menu-btn { display: block; }
   }
 
   @media (max-width: 760px) {
@@ -670,7 +728,10 @@
 <div class="app">
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-head">
-      <div class="brand"><span class="logo">🐾</span>猫娘 AI</div>
+      <div class="brand-row">
+        <div class="brand"><span class="logo">🐾</span>猫娘 AI</div>
+        <button class="collapse-btn" id="collapseBtn" title="收起侧栏">−</button>
+      </div>
       <button class="new-chat" id="newChatBtn">＋ 新建对话</button>
     </div>
     <div class="conv-list" id="convList"></div>
@@ -707,18 +768,55 @@
     <div class="note">
       <b>安全提示：</b>如果你直接在浏览器里填入 API Key，它会被保存在你自己的浏览器本地，但会随请求发送给接口。公开部署时，任何访客都能通过浏览器抓取到这个 Key 并盗刷你的额度。正式上线建议使用配套的 <code>worker.js</code> 代理，把 Key 放在服务端，前端只填「代理地址」。
     </div>
-    <div class="field">
-      <label>系统提示词</label>
-      <textarea id="setSystemPrompt"></textarea>
-    </div>
-    <div class="field">
-      <label>Temperature <button class="help-btn" id="tempHelpBtn" type="button" title="说明">?</button></label>
-      <div class="range-row">
-        <input type="range" id="setTemperature" min="0" max="2" step="0.1" />
-        <span class="range-val" id="tempVal">0.7</span>
+    <details class="more-settings" open>
+      <summary>当前对话专属设置</summary>
+      <div class="more-body">
+        <div class="field">
+          <label>角色</label>
+          <select id="setRole">
+            <option value="liya">猫娘莉娅</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>提示词</label>
+          <textarea id="setSystemPrompt"></textarea>
+        </div>
+        <div class="field">
+          <label>音色</label>
+          <select id="setVoiceTop"></select>
+        </div>
+        <div class="field">
+          <label>Temperature <button class="help-btn" id="tempHelpBtn" type="button" title="说明">?</button></label>
+          <div class="range-row">
+            <input type="range" id="setTemperature" min="0" max="2" step="0.1" />
+            <span class="range-val" id="tempVal">0.7</span>
+          </div>
+          <div class="field-help" id="tempHelp">越低越稳定、越听话；越高越活泼、越有创造力，但更容易跑题或忘记规则。默认 0.7 比较平衡。</div>
+        </div>
+        <div class="field">
+          <label>语速（Speed）</label>
+          <div class="range-row">
+            <input type="range" id="setSpeed" min="0.5" max="2" step="0.1" />
+            <span class="range-val" id="speedVal">1.0</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>音调（Pitch）</label>
+          <div class="range-row">
+            <input type="range" id="setPitch" min="-12" max="12" step="1" />
+            <span class="range-val" id="pitchVal">0</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>音量（Vol）</label>
+          <div class="range-row">
+            <input type="range" id="setVol" min="0.1" max="2" step="0.1" />
+            <span class="range-val" id="volVal">1.0</span>
+          </div>
+        </div>
+        <div class="conv-hint">以上参数仅对当前对话生效</div>
       </div>
-      <div class="field-help" id="tempHelp">越低越稳定、越听话；越高越活泼、越有创造力，但更容易跑题或忘记规则。默认 0.7 比较平衡。</div>
-    </div>
+    </details>
     <div class="check-row">
       <input type="checkbox" id="setStream" />
       <label for="setStream">流式输出（逐字显示）</label>
@@ -726,27 +824,6 @@
     <div class="check-row">
       <input type="checkbox" id="setAutoSpeak" />
       <label for="setAutoSpeak">自动朗读（回复完成后自动播放语音）</label>
-    </div>
-    <div class="field">
-      <label>语速（Speed）</label>
-      <div class="range-row">
-        <input type="range" id="setSpeed" min="0.5" max="2" step="0.1" />
-        <span class="range-val" id="speedVal">1.0</span>
-      </div>
-    </div>
-    <div class="field">
-      <label>音调（Pitch）</label>
-      <div class="range-row">
-        <input type="range" id="setPitch" min="-12" max="12" step="1" />
-        <span class="range-val" id="pitchVal">0</span>
-      </div>
-    </div>
-    <div class="field">
-      <label>音量（Vol）</label>
-      <div class="range-row">
-        <input type="range" id="setVol" min="0.1" max="2" step="0.1" />
-        <span class="range-val" id="volVal">1.0</span>
-      </div>
     </div>
 
     <details class="more-settings">
@@ -777,16 +854,8 @@
           <input id="setTtsUrl" placeholder="https://your-worker.workers.dev/tts" />
         </div>
         <div class="field">
-          <label>语音角色（Voice）</label>
-          <input id="setVoice" list="voiceList" placeholder="Chinese (Mandarin)_Cute_Spirit" />
-          <datalist id="voiceList">
-            <option value="Chinese (Mandarin)_Cute_Spirit" label="活泼 · 元气精灵"></option>
-            <option value="Chinese (Mandarin)_Crisp_Girl" label="清脆 · 开朗"></option>
-            <option value="qiaopi_mengmei" label="萝莉 · 俏皮萌妹"></option>
-            <option value="female-shaonv" label="少女"></option>
-            <option value="female-tianmei" label="甜美"></option>
-            <option value="female-yujie" label="御姐"></option>
-          </datalist>
+          <label>音色（Voice）</label>
+          <select id="setVoice"></select>
         </div>
         <div class="field">
           <label>MiniMax 语音 Key（可选，直连时填写）</label>
@@ -818,13 +887,32 @@
     voice: "Chinese (Mandarin)_Cute_Spirit",
     minimaxKey: "sk-api-wnY71M_d_Apx-CQFfaZsU-JalBTbM9ToWoOXj4XbguEEuaeM6ZaZt-EQpAcbrHti4EFWzANncddo3g5k3ZJpkzcchoD1_tz7MVkmW1_eA50x8zMf-zdrLpQ",
     model: "deepseek-chat",
-    systemPrompt: "你叫莉娅，是一只可爱的猫娘，性格活泼、温柔、俏皮，说话带点撒娇。请用轻松可爱的语气和用户聊天，以中文为主，自称「莉娅」，还要称呼用户为主人。不要提及自己是 AI 助手、模型或程序，就把自己当成一只真实的猫娘。每次回复的结尾都要加上「喵」字。",
-    temperature: 0.7,
     stream: true,
+    autoSpeak: false
+  };
+
+  const ROLE_PRESETS = [
+    { id: "liya", name: "猫娘莉娅", prompt: "你叫莉娅，是一只可爱的猫娘，性格活泼、温柔、俏皮，说话带点撒娇。请用轻松可爱的语气和用户聊天，以中文为主，自称「莉娅」，还要称呼用户为主人。不要提及自己是 AI 助手、模型或程序，就把自己当成一只真实的猫娘。每次回复的结尾都要加上「喵」字。" }
+  ];
+
+  const VOICE_OPTIONS = [
+    { value: "Chinese (Mandarin)_Cute_Spirit", label: "元气萝莉" },
+    { value: "qiaopi_mengmei", label: "俏皮萌妹" },
+    { value: "tianxin_xiaoling", label: "甜心小玲" },
+    { value: "wumei_yujie", label: "妩媚御姐" },
+    { value: "anya_xuejie", label: "淡雅学姐" },
+    { value: "Chinese (Mandarin)_Soft_Girl", label: "柔和少女" },
+    { value: "Chinese (Mandarin)_Crisp_Girl", label: "清脆少女" },
+    { value: "Chinese (Mandarin)_Warm_Girl", label: "温暖少女" }
+  ];
+
+  const PARAM_DEFAULTS = {
+    role: "liya",
+    prompt: ROLE_PRESETS[0].prompt,
+    temperature: 0.7,
     speed: 1.0,
     pitch: 0,
-    vol: 1.0,
-    autoSpeak: false
+    vol: 1.0
   };
 
   const state = {
@@ -964,13 +1052,24 @@
     return state.conversations.find(c => c.id === state.activeId) || null;
   }
 
+  function getConvParams(conv) {
+    if (!conv.params) conv.params = { ...PARAM_DEFAULTS };
+    return conv.params;
+  }
+
+  function activeParams() {
+    const conv = getActive();
+    return conv ? getConvParams(conv) : { ...PARAM_DEFAULTS };
+  }
+
   function newConversation() {
     const conv = {
       id: uid(),
       title: "新对话",
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      messages: []
+      messages: [],
+      params: { ...PARAM_DEFAULTS }
     };
     state.conversations.unshift(conv);
     state.activeId = conv.id;
@@ -1120,7 +1219,7 @@
     const history = conv.messages.slice(0, idx)
       .filter(m => m.role === "user" || (m.role === "assistant" && m.content))
       .map(m => ({ role: m.role, content: m.content }));
-    return [{ role: "system", content: state.settings.systemPrompt || DEFAULTS.systemPrompt }, ...history];
+    return [{ role: "system", content: getConvParams(conv).prompt || PARAM_DEFAULTS.prompt }, ...history];
   }
 
   async function sendMessage(text) {
@@ -1206,7 +1305,7 @@
     const body = {
       model: s.model,
       messages: apiMessages,
-      temperature: Number(s.temperature) || 0.7,
+      temperature: Number(getConvParams(conv).temperature) || 0.7,
       stream: s.stream !== false
     };
 
@@ -1258,6 +1357,14 @@
   }
 
   /* ---------- settings modal ---------- */
+  function fillVoiceSelects() {
+    const html = VOICE_OPTIONS.map(o =>
+      '<option value="' + o.value + '">' + o.label + '</option>'
+    ).join("");
+    $("setVoice").innerHTML = html;
+    $("setVoiceTop").innerHTML = html;
+  }
+
   function openSettings() {
     const s = state.settings;
     $("setBaseUrl").value = s.baseUrl;
@@ -1265,19 +1372,22 @@
     $("setProxyUrl").value = s.proxyUrl;
     $("setTtsUrl").value = s.ttsUrl;
     $("setVoice").value = s.voice;
+    $("setVoiceTop").value = s.voice;
     $("setMinimaxKey").value = s.minimaxKey;
     $("setModel").value = s.model;
-    $("setSystemPrompt").value = s.systemPrompt;
-    $("setTemperature").value = s.temperature;
-    $("tempVal").textContent = Number(s.temperature).toFixed(1);
     $("setStream").checked = s.stream !== false;
     $("setAutoSpeak").checked = s.autoSpeak !== false;
-    $("setSpeed").value = s.speed;
-    $("speedVal").textContent = Number(s.speed).toFixed(1);
-    $("setPitch").value = s.pitch;
-    $("pitchVal").textContent = Number(s.pitch).toFixed(0);
-    $("setVol").value = s.vol;
-    $("volVal").textContent = Number(s.vol).toFixed(1);
+    const p = activeParams();
+    $("setRole").value = p.role || PARAM_DEFAULTS.role;
+    $("setSystemPrompt").value = p.prompt;
+    $("setTemperature").value = p.temperature;
+    $("tempVal").textContent = Number(p.temperature).toFixed(1);
+    $("setSpeed").value = p.speed;
+    $("speedVal").textContent = Number(p.speed).toFixed(1);
+    $("setPitch").value = p.pitch;
+    $("pitchVal").textContent = Number(p.pitch).toFixed(0);
+    $("setVol").value = p.vol;
+    $("volVal").textContent = Number(p.vol).toFixed(1);
     $("overlay").classList.add("open");
     sidebar.classList.remove("open");
   }
@@ -1294,13 +1404,18 @@
     state.settings.voice = $("setVoice").value.trim() || "Chinese (Mandarin)_Cute_Spirit";
     state.settings.minimaxKey = $("setMinimaxKey").value.trim();
     state.settings.model = $("setModel").value.trim() || "deepseek-chat";
-    state.settings.systemPrompt = $("setSystemPrompt").value;
-    state.settings.temperature = Number($("setTemperature").value);
     state.settings.stream = $("setStream").checked;
     state.settings.autoSpeak = $("setAutoSpeak").checked;
-    state.settings.speed = Number($("setSpeed").value);
-    state.settings.pitch = Number($("setPitch").value);
-    state.settings.vol = Number($("setVol").value);
+    const conv = getActive();
+    if (conv) {
+      const p = getConvParams(conv);
+      p.role = $("setRole").value;
+      p.prompt = $("setSystemPrompt").value;
+      p.temperature = Number($("setTemperature").value);
+      p.speed = Number($("setSpeed").value);
+      p.pitch = Number($("setPitch").value);
+      p.vol = Number($("setVol").value);
+    }
     save();
     updateHint();
     closeSettings();
@@ -1346,6 +1461,7 @@
   }
 
   async function miniMaxTts(text, voice) {
+    const p = activeParams();
     const resp = await fetch("https://api.minimaxi.com/v1/t2a_v2", {
       method: "POST",
       headers: {
@@ -1358,9 +1474,9 @@
         stream: false,
         voice_setting: {
           voice_id: voice,
-          speed: Number(state.settings.speed) || 1.0,
-          vol: Number(state.settings.vol) || 1.0,
-          pitch: Number(state.settings.pitch) || 0
+          speed: Number(p.speed) || 1.0,
+          vol: Number(p.vol) || 1.0,
+          pitch: Number(p.pitch) || 0
         },
         audio_setting: { sample_rate: 32000, bitrate: 128000, format: "mp3", channel: 1 }
       })
@@ -1408,15 +1524,16 @@
       try {
         let blob;
         if (state.settings.ttsUrl) {
+          const p = activeParams();
           const resp = await fetch(state.settings.ttsUrl.replace(/\/+$/, ""), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               text,
               voice: state.settings.voice,
-              speed: state.settings.speed,
-              pitch: state.settings.pitch,
-              vol: state.settings.vol
+              speed: p.speed,
+              pitch: p.pitch,
+              vol: p.vol
             })
           });
           if (!resp.ok) {
@@ -1440,11 +1557,12 @@
       return;
     }
     clearKeepAlive();
+    const p = activeParams();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = "zh-CN";
-    u.rate = Math.min(2, Math.max(0.5, Number(state.settings.speed) || 1));
-    u.pitch = Math.min(2, Math.max(0, 1 + (Number(state.settings.pitch) || 0) / 24));
-    u.volume = Math.min(1, Math.max(0.1, Number(state.settings.vol) || 1));
+    u.rate = Math.min(2, Math.max(0.5, Number(p.speed) || 1));
+    u.pitch = Math.min(2, Math.max(0, 1 + (Number(p.pitch) || 0) / 24));
+    u.volume = Math.min(1, Math.max(0.1, Number(p.vol) || 1));
     const v = bestSystemVoice();
     if (v) u.voice = v;
     btn.textContent = "⏹ 停止";
@@ -1460,6 +1578,7 @@
   /* ---------- events ---------- */
   function init() {
     load();
+    fillVoiceSelects();
     renderSidebar();
     renderAll();
     updateHint();
@@ -1524,19 +1643,21 @@
       $("setProxyUrl").value = DEFAULTS.proxyUrl;
       $("setTtsUrl").value = DEFAULTS.ttsUrl;
       $("setVoice").value = DEFAULTS.voice;
+      $("setVoiceTop").value = DEFAULTS.voice;
       $("setMinimaxKey").value = DEFAULTS.minimaxKey;
       $("setModel").value = DEFAULTS.model;
-      $("setSystemPrompt").value = DEFAULTS.systemPrompt;
-      $("setTemperature").value = DEFAULTS.temperature;
-      $("tempVal").textContent = Number(DEFAULTS.temperature).toFixed(1);
+      $("setRole").value = PARAM_DEFAULTS.role;
+      $("setSystemPrompt").value = PARAM_DEFAULTS.prompt;
       $("setStream").checked = DEFAULTS.stream !== false;
       $("setAutoSpeak").checked = DEFAULTS.autoSpeak !== false;
-      $("setSpeed").value = DEFAULTS.speed;
-      $("speedVal").textContent = Number(DEFAULTS.speed).toFixed(1);
-      $("setPitch").value = DEFAULTS.pitch;
-      $("pitchVal").textContent = Number(DEFAULTS.pitch).toFixed(0);
-      $("setVol").value = DEFAULTS.vol;
-      $("volVal").textContent = Number(DEFAULTS.vol).toFixed(1);
+      $("setTemperature").value = PARAM_DEFAULTS.temperature;
+      $("tempVal").textContent = Number(PARAM_DEFAULTS.temperature).toFixed(1);
+      $("setSpeed").value = PARAM_DEFAULTS.speed;
+      $("speedVal").textContent = Number(PARAM_DEFAULTS.speed).toFixed(1);
+      $("setPitch").value = PARAM_DEFAULTS.pitch;
+      $("pitchVal").textContent = Number(PARAM_DEFAULTS.pitch).toFixed(0);
+      $("setVol").value = PARAM_DEFAULTS.vol;
+      $("volVal").textContent = Number(PARAM_DEFAULTS.vol).toFixed(1);
     });
     $("setTemperature").addEventListener("input", (e) => {
       $("tempVal").textContent = Number(e.target.value).toFixed(1);
@@ -1544,10 +1665,31 @@
     $("setSpeed").addEventListener("input", (e) => { $("speedVal").textContent = Number(e.target.value).toFixed(1); });
     $("setPitch").addEventListener("input", (e) => { $("pitchVal").textContent = Number(e.target.value).toFixed(0); });
     $("setVol").addEventListener("input", (e) => { $("volVal").textContent = Number(e.target.value).toFixed(1); });
+    $("setRole").addEventListener("change", () => {
+      const preset = ROLE_PRESETS.find(r => r.id === $("setRole").value);
+      if (preset) $("setSystemPrompt").value = preset.prompt;
+    });
+    $("setVoice").addEventListener("change", () => {
+      $("setVoiceTop").value = $("setVoice").value;
+    });
+    $("setVoiceTop").addEventListener("change", () => {
+      $("setVoice").value = $("setVoiceTop").value;
+    });
     $("tempHelpBtn").addEventListener("click", () => {
       $("tempHelp").classList.toggle("show");
     });
-    $("menuBtn").addEventListener("click", () => sidebar.classList.toggle("open"));
+    $("menuBtn").addEventListener("click", () => {
+      const app = document.querySelector(".app");
+      if (app.classList.contains("sidebar-hidden")) {
+        app.classList.remove("sidebar-hidden");
+      } else {
+        sidebar.classList.toggle("open");
+      }
+    });
+    $("collapseBtn").addEventListener("click", () => {
+      document.querySelector(".app").classList.add("sidebar-hidden");
+      sidebar.classList.remove("open");
+    });
   }
 
   init();

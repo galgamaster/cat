@@ -4,13 +4,15 @@
 
 ## 一、本地体验
 
-直接双击 `index.html` 用浏览器打开即可。未配置 Key 时是演示模式；点击右上角「⚙ 设置」，填入：
+直接双击 `index.html` 用浏览器打开即可。当前文件已预填默认 Key，打开即可对话；如需更换，点击右上角「⚙ 设置」，填入：
 
 - 接口地址：`https://api.deepseek.com`
 - API Key：`sk-...`（你的 DeepSeek Key）
 - 模型：`deepseek-chat`（普通对话）或 `deepseek-reasoner`（深度推理）
 
 Key 只保存在你自己的浏览器本地（localStorage），不会上传到别处。
+
+> 注意：当前 `index.html` 源码里已写入了你的 API Key，仅适合本地使用；公开部署前务必改用第三节的代理方案并轮换 Key。
 
 ## 二、部署成在线网站
 
@@ -39,3 +41,16 @@ Key 只保存在你自己的浏览器本地（localStorage），不会上传到�
 - 聊天记录保存在访客自己的浏览器里，换设备/清缓存会丢失。
 - 如需多用户、历史同步、计费等，可以在这个基础上加一个后端或数据库。
 - 前端没有引入任何第三方 CDN 依赖，完全离线可用。
+
+## 五、语音输出
+
+每条猫娘回复下方有「🔊 播放」按钮。有两种模式：
+
+- **本地语音（默认）**：没填语音服务地址时，用浏览器/系统的中文语音朗读。Windows 11 自带「晓晓·在线自然」等神经语音，效果较自然；其它设备可能退回机械音。
+- **自然人声（推荐上线用）**：在「设置 → 语音服务地址」填入一个 TTS 代理地址，由服务端合成真人感音频返回。本目录提供 `tts-worker.js`（MiniMax 海螺语音，中文自然度更好）：
+
+1. 在 Cloudflare 创建 Worker，粘贴 `tts-worker.js` 并部署。
+2. 在 Variables and Secrets 添加 `MINIMAX_API_KEY`，值为你的 MiniMax Key（注意账户需有余额或免费额度）。
+3. 把 Worker 地址填进网页「设置 → 语音服务地址」，语音角色默认 `Chinese (Mandarin)_Cute_Spirit`（活泼·元气精灵），也可换成 `Chinese (Mandarin)_Crisp_Girl`（清脆开朗）、`qiaopi_mengmei`（萝莉·俏皮萌妹）等。
+
+这样前端不接触语音 Key，访客点击播放时由服务端合成后返回音频。

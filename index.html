@@ -298,6 +298,21 @@
 
   .msg-body { min-width: 0; flex: 1; }
 
+  .msg-tools { margin-top: 8px; }
+
+  .speak-btn {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--muted);
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: color .15s, border-color .15s;
+  }
+
+  .speak-btn:hover { color: var(--accent); border-color: var(--accent); }
+
   .user-bubble {
     background: var(--user-bubble);
     padding: 12px 16px;
@@ -641,6 +656,26 @@
       <input id="setProxyUrl" placeholder="https://your-worker.workers.dev" />
     </div>
     <div class="field">
+      <label>语音服务地址（TTS，可选，自然人声）</label>
+      <input id="setTtsUrl" placeholder="https://your-worker.workers.dev/tts" />
+    </div>
+    <div class="field">
+      <label>语音角色（Voice）</label>
+      <input id="setVoice" list="voiceList" placeholder="Chinese (Mandarin)_Cute_Spirit" />
+      <datalist id="voiceList">
+        <option value="Chinese (Mandarin)_Cute_Spirit" label="活泼 · 元气精灵"></option>
+        <option value="Chinese (Mandarin)_Crisp_Girl" label="清脆 · 开朗"></option>
+        <option value="qiaopi_mengmei" label="萝莉 · 俏皮萌妹"></option>
+        <option value="female-shaonv" label="少女"></option>
+        <option value="female-tianmei" label="甜美"></option>
+        <option value="female-yujie" label="御姐"></option>
+      </datalist>
+    </div>
+    <div class="field">
+      <label>MiniMax 语音 Key（可选，直连时填写）</label>
+      <input id="setMinimaxKey" type="password" placeholder="sk-api-..." />
+    </div>
+    <div class="field">
       <label>模型</label>
       <input id="setModel" list="modelList" placeholder="deepseek-chat" />
       <datalist id="modelList">
@@ -681,14 +716,18 @@
     baseUrl: "https://api.deepseek.com",
     apiKey: "sk-a5c2f5a8497a44919429ba0a342b712a",
     proxyUrl: "",
+    ttsUrl: "",
+    voice: "Chinese (Mandarin)_Cute_Spirit",
+    minimaxKey: "sk-api-wnY71M_d_Apx-CQFfaZsU-JalBTbM9ToWoOXj4XbguEEuaeM6ZaZt-EQpAcbrHti4EFWzANncddo3g5k3ZJpkzcchoD1_tz7MVkmW1_eA50x8zMf-zdrLpQ",
     model: "deepseek-chat",
-    systemPrompt: "你叫莉娅，是一只可爱的猫娘 AI 助手，性格活泼、温柔、俏皮，说话带点撒娇。请用轻松可爱的语气和用户聊天，以中文为主，自称「莉娅」。每次回复的结尾都要加上「喵」字。",
+    systemPrompt: "你叫莉娅，是一只可爱的猫娘，性格活泼、温柔、俏皮，说话带点撒娇。请用轻松可爱的语气和用户聊天，以中文为主，自称「莉娅」。不要提及自己是 AI 助手、模型或程序，就把自己当成一只真实的猫娘。每次回复的结尾都要加上「喵」字。",
     temperature: 0.7,
     stream: true
   };
 
   const OLD_SYSTEM_PROMPT = "你是一个乐于助人、表达清晰的中文 AI 助手。";
   const OLD_SYSTEM_PROMPT_V2 = "你是一只可爱的猫娘 AI 助手，性格活泼、温柔、俏皮，说话带点撒娇。请用轻松可爱的语气和用户聊天，以中文为主。每次回复的结尾都要加上「喵」字。";
+  const OLD_SYSTEM_PROMPT_V3 = "你叫莉娅，是一只可爱的猫娘 AI 助手，性格活泼、温柔、俏皮，说话带点撒娇。请用轻松可爱的语气和用户聊天，以中文为主，自称「莉娅」。每次回复的结尾都要加上「喵」字。";
 
   const state = {
     settings: { ...DEFAULTS },
@@ -712,11 +751,17 @@
         const data = JSON.parse(raw);
         state.settings = { ...DEFAULTS, ...(data.settings || {}) };
         if (state.settings.systemPrompt === OLD_SYSTEM_PROMPT ||
-            state.settings.systemPrompt === OLD_SYSTEM_PROMPT_V2) {
+            state.settings.systemPrompt === OLD_SYSTEM_PROMPT_V2 ||
+            state.settings.systemPrompt === OLD_SYSTEM_PROMPT_V3) {
           state.settings.systemPrompt = DEFAULTS.systemPrompt;
         }
         if (!state.settings.apiKey && !data.keySeeded) {
           state.settings.apiKey = DEFAULTS.apiKey;
+        }
+        if ((state.settings.voice || "").startsWith("zh-CN-") ||
+            state.settings.voice === "female-shaonv" ||
+            state.settings.voice === "qiaopi_mengmei") {
+          state.settings.voice = DEFAULTS.voice;
         }
         state.conversations = Array.isArray(data.conversations) ? data.conversations : [];
         state.activeId = data.activeId || null;
@@ -879,6 +924,7 @@
   function selectConversation(id) {
     state.activeId = id;
     save();
+    stopAudio();
     renderSidebar();
     renderAll();
     sidebar.classList.remove("open");
@@ -904,7 +950,8 @@
       : '<div class="reasoning hidden"><details><summary>🧠 思考过程</summary><div class="reasoning-body"></div></details></div>';
     return '<div class="msg assistant" data-msg-index="' + i + '"><div class="avatar"><img src="avatar.png" alt="猫娘头像"></div>' +
       '<div class="msg-body">' + reasoning + '<div class="content markdown">' +
-      renderMarkdown(m.content || "") + '</div></div></div>';
+      renderMarkdown(m.content || "") + '</div>' +
+      '<div class="msg-tools"><button class="speak-btn" title="播放语音">🔊 播放</button></div></div></div>';
   }
 
   function renderAll() {
@@ -972,9 +1019,16 @@
 
   function updateHint() {
     const s = state.settings;
-    if (s.proxyUrl) $("hint").textContent = "已启用服务端代理 · " + s.model;
-    else if (s.apiKey) $("hint").textContent = "已连接 DeepSeek · " + s.model;
-    else $("hint").textContent = "演示模式 · 在「设置」中配置 DeepSeek API Key 后即可使用真实模型";
+    let base;
+    if (s.proxyUrl) base = "已启用服务端代理 · " + s.model;
+    else if (s.apiKey) base = "已连接 DeepSeek · " + s.model;
+    else base = "演示模式 · 在「设置」中配置 DeepSeek API Key 后即可使用真实模型";
+    const voiceMode = s.ttsUrl
+      ? "语音：MiniMax（代理 · " + s.voice + "）"
+      : s.minimaxKey
+        ? "语音：MiniMax（直连 · " + s.voice + "）"
+        : "语音：系统（未接 MiniMax）";
+    $("hint").textContent = base + " · " + voiceMode;
     $("modelPill").textContent = (s.apiKey || s.proxyUrl) ? s.model : "未连接";
   }
 
@@ -990,6 +1044,7 @@
     const inputEl = $("input");
     inputEl.value = "";
     inputEl.style.height = "auto";
+    stopAudio();
     let conv = getActive();
     if (!conv) conv = newConversation();
 
@@ -1120,6 +1175,9 @@
     $("setBaseUrl").value = s.baseUrl;
     $("setApiKey").value = s.apiKey;
     $("setProxyUrl").value = s.proxyUrl;
+    $("setTtsUrl").value = s.ttsUrl;
+    $("setVoice").value = s.voice;
+    $("setMinimaxKey").value = s.minimaxKey;
     $("setModel").value = s.model;
     $("setSystemPrompt").value = s.systemPrompt;
     $("setTemperature").value = s.temperature;
@@ -1137,6 +1195,9 @@
     state.settings.baseUrl = $("setBaseUrl").value.trim() || DEFAULTS.baseUrl;
     state.settings.apiKey = $("setApiKey").value.trim();
     state.settings.proxyUrl = $("setProxyUrl").value.trim();
+    state.settings.ttsUrl = $("setTtsUrl").value.trim();
+    state.settings.voice = $("setVoice").value.trim() || "Chinese (Mandarin)_Cute_Spirit";
+    state.settings.minimaxKey = $("setMinimaxKey").value.trim();
     state.settings.model = $("setModel").value.trim() || "deepseek-chat";
     state.settings.systemPrompt = $("setSystemPrompt").value;
     state.settings.temperature = Number($("setTemperature").value);
@@ -1146,12 +1207,152 @@
     closeSettings();
   }
 
+  /* ---------- speech ---------- */
+  let currentAudio = null;
+  let synthKeepAlive = null;
+
+  function clearKeepAlive() {
+    if (synthKeepAlive) { clearInterval(synthKeepAlive); synthKeepAlive = null; }
+  }
+
+  function stopAudio() {
+    clearKeepAlive();
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    if (currentAudio) {
+      try { currentAudio.pause(); currentAudio.src = ""; } catch (_) {}
+      currentAudio = null;
+    }
+    document.querySelectorAll(".speak-btn").forEach(b => { b.textContent = "🔊 播放"; });
+  }
+
+  function bestSystemVoice() {
+    if (!("speechSynthesis" in window)) return null;
+    const voices = window.speechSynthesis.getVoices();
+    const norm = (v) => (v.lang || "").toLowerCase().replace(/_/g, "-");
+    const mandarin = voices.filter(v => norm(v).startsWith("zh-cn"));
+    const pool = mandarin.length ? mandarin : voices.filter(v => norm(v).startsWith("zh"));
+    return pool.find(v => /online|natural/i.test(v.name)) ||
+           pool.find(v => /xiaoxiao|xiaoyi|yunxi|yunyang|xiaobei|xiaoni/i.test(v.name)) ||
+           pool[0] || null;
+  }
+
+  function playAudioBlob(blob, btn) {
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    currentAudio = audio;
+    btn.textContent = "⏹ 停止";
+    audio.onended = () => { if (currentAudio === audio) currentAudio = null; btn.textContent = "🔊 播放"; URL.revokeObjectURL(url); };
+    audio.onerror = () => { if (currentAudio === audio) currentAudio = null; btn.textContent = "🔊 播放"; URL.revokeObjectURL(url); };
+    return audio.play();
+  }
+
+  async function miniMaxTts(text, voice) {
+    const resp = await fetch("https://api.minimaxi.com/v1/t2a_v2", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + state.settings.minimaxKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "speech-02-hd",
+        text,
+        stream: false,
+        voice_setting: { voice_id: voice, speed: 1.0, vol: 1.0, pitch: 0 },
+        audio_setting: { sample_rate: 32000, bitrate: 128000, format: "mp3", channel: 1 }
+      })
+    });
+    if (!resp.ok) {
+      const e = await resp.text().catch(() => "");
+      throw new Error("HTTP " + resp.status + (e ? " · " + e.slice(0, 160) : ""));
+    }
+    const j = await resp.json();
+    const br = j && j.base_resp;
+    if (br && br.status_code !== 0) {
+      throw new Error("MiniMax：" + (br.status_msg || br.status_code));
+    }
+    const hex = ((j && j.data && j.data.audio) || "").replace(/\s+/g, "");
+    if (!hex) throw new Error("MiniMax 未返回音频");
+    if (hex.length % 2 !== 0) throw new Error("音频数据异常");
+    const bytes = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < hex.length; i += 2) {
+      bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+    }
+    return new Blob([bytes], { type: "audio/mpeg" });
+  }
+
+  function stripActions(s) {
+    return String(s)
+      .replace(/（[^（）]*）/g, "")
+      .replace(/\([^()]*\)/g, "")
+      .replace(/[ \t]+/g, " ")
+      .replace(/\n+/g, " ")
+      .trim();
+  }
+
+  async function handleSpeak(btn) {
+    const msgEl = btn.closest(".msg.assistant");
+    const raw = (msgEl.querySelector(".content").textContent || "").trim();
+    const text = stripActions(raw);
+    if (!text) return;
+
+    const speaking = (currentAudio && !currentAudio.paused) ||
+      ("speechSynthesis" in window && window.speechSynthesis.speaking);
+    if (speaking) { stopAudio(); return; }
+
+    if (state.settings.ttsUrl || state.settings.minimaxKey) {
+      btn.textContent = "⏳ 合成中…";
+      try {
+        let blob;
+        if (state.settings.ttsUrl) {
+          const resp = await fetch(state.settings.ttsUrl.replace(/\/+$/, ""), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text, voice: state.settings.voice })
+          });
+          if (!resp.ok) {
+            const err = await resp.text().catch(() => "");
+            throw new Error("HTTP " + resp.status + (err ? " · " + err.slice(0, 160) : ""));
+          }
+          blob = await resp.blob();
+        } else {
+          blob = await miniMaxTts(text, state.settings.voice);
+        }
+        await playAudioBlob(blob, btn);
+      } catch (e) {
+        btn.textContent = "🔊 播放";
+        alert("语音合成失败：" + (e && e.message ? e.message : e));
+      }
+      return;
+    }
+
+    if (!("speechSynthesis" in window)) {
+      alert("当前浏览器不支持本地语音，请在「设置」中配置语音服务地址");
+      return;
+    }
+    clearKeepAlive();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "zh-CN";
+    u.rate = 1.05;
+    u.pitch = 1.02;
+    const v = bestSystemVoice();
+    if (v) u.voice = v;
+    btn.textContent = "⏹ 停止";
+    u.onend = () => { clearKeepAlive(); btn.textContent = "🔊 播放"; };
+    u.onerror = () => { clearKeepAlive(); btn.textContent = "🔊 播放"; };
+    synthKeepAlive = setInterval(() => {
+      if (window.speechSynthesis.speaking) { window.speechSynthesis.pause(); window.speechSynthesis.resume(); }
+      else clearKeepAlive();
+    }, 14000);
+    window.speechSynthesis.speak(u);
+  }
+
   /* ---------- events ---------- */
   function init() {
     load();
     renderSidebar();
     renderAll();
     updateHint();
+    if ("speechSynthesis" in window) window.speechSynthesis.getVoices();
 
     $("newChatBtn").addEventListener("click", () => {
       newConversation();
@@ -1195,6 +1396,8 @@
           setTimeout(() => { copy.textContent = "复制"; }, 1200);
         });
       }
+      const speak = e.target.closest(".speak-btn");
+      if (speak) { handleSpeak(speak); }
     });
 
     $("gearBtn").addEventListener("click", openSettings);

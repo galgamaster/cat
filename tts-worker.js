@@ -52,9 +52,9 @@ export default {
         stream: false,
         voice_setting: {
           voice_id: voice,
-          speed: 1.0,
-          vol: 1.0,
-          pitch: 0
+          speed: Number(payload.speed) || 1.0,
+          vol: Number(payload.vol) || 1.0,
+          pitch: Number(payload.pitch) || 0
         },
         audio_setting: {
           sample_rate: 32000,

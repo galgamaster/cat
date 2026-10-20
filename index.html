@@ -518,6 +518,35 @@
     color: var(--muted);
     margin-bottom: 6px;
   }
+  .help-btn {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+    text-align: center;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: var(--panel-2);
+    color: var(--muted);
+    font-size: 11px;
+    cursor: pointer;
+    margin-left: 4px;
+    padding: 0;
+    vertical-align: 1px;
+  }
+  .help-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .field-help {
+    display: none;
+    margin-top: 8px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--muted);
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+  .field-help.show { display: block; }
   .field input, .field textarea {
     width: 100%;
     padding: 10px 12px;
@@ -557,10 +586,45 @@
     margin-bottom: 18px;
   }
 
+  .more-settings {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--panel-2);
+    margin-bottom: 18px;
+  }
+  .more-settings summary {
+    cursor: pointer;
+    padding: 11px 14px;
+    font-size: 14px;
+    color: var(--text);
+    user-select: none;
+    list-style: none;
+  }
+  .more-settings summary::-webkit-details-marker { display: none; }
+  .more-settings summary::before {
+    content: "▸";
+    display: inline-block;
+    margin-right: 8px;
+    color: var(--muted);
+    transition: transform .15s;
+  }
+  .more-settings[open] summary::before { transform: rotate(90deg); }
+  .more-body {
+    border-top: 1px solid var(--border);
+    padding: 16px 14px 2px;
+  }
+
   .modal-actions {
     display: flex;
     gap: 10px;
     justify-content: flex-end;
+  }
+
+  .privacy-note {
+    margin-top: 16px;
+    text-align: center;
+    font-size: 12px;
+    color: #3b82f6;
   }
 
   .btn {
@@ -644,65 +708,99 @@
       <b>安全提示：</b>如果你直接在浏览器里填入 API Key，它会被保存在你自己的浏览器本地，但会随请求发送给接口。公开部署时，任何访客都能通过浏览器抓取到这个 Key 并盗刷你的额度。正式上线建议使用配套的 <code>worker.js</code> 代理，把 Key 放在服务端，前端只填「代理地址」。
     </div>
     <div class="field">
-      <label>接口地址（Base URL）</label>
-      <input id="setBaseUrl" placeholder="https://api.deepseek.com" />
-    </div>
-    <div class="field">
-      <label>API Key</label>
-      <input id="setApiKey" type="password" placeholder="sk-..." />
-    </div>
-    <div class="field">
-      <label>代理地址（可选，使用 worker.js 时填写）</label>
-      <input id="setProxyUrl" placeholder="https://your-worker.workers.dev" />
-    </div>
-    <div class="field">
-      <label>语音服务地址（TTS，可选，自然人声）</label>
-      <input id="setTtsUrl" placeholder="https://your-worker.workers.dev/tts" />
-    </div>
-    <div class="field">
-      <label>语音角色（Voice）</label>
-      <input id="setVoice" list="voiceList" placeholder="Chinese (Mandarin)_Cute_Spirit" />
-      <datalist id="voiceList">
-        <option value="Chinese (Mandarin)_Cute_Spirit" label="活泼 · 元气精灵"></option>
-        <option value="Chinese (Mandarin)_Crisp_Girl" label="清脆 · 开朗"></option>
-        <option value="qiaopi_mengmei" label="萝莉 · 俏皮萌妹"></option>
-        <option value="female-shaonv" label="少女"></option>
-        <option value="female-tianmei" label="甜美"></option>
-        <option value="female-yujie" label="御姐"></option>
-      </datalist>
-    </div>
-    <div class="field">
-      <label>MiniMax 语音 Key（可选，直连时填写）</label>
-      <input id="setMinimaxKey" type="password" placeholder="sk-api-..." />
-    </div>
-    <div class="field">
-      <label>模型</label>
-      <input id="setModel" list="modelList" placeholder="deepseek-chat" />
-      <datalist id="modelList">
-        <option value="deepseek-chat"></option>
-        <option value="deepseek-reasoner"></option>
-      </datalist>
-    </div>
-    <div class="field">
       <label>系统提示词</label>
       <textarea id="setSystemPrompt"></textarea>
     </div>
     <div class="field">
-      <label>Temperature</label>
+      <label>Temperature <button class="help-btn" id="tempHelpBtn" type="button" title="说明">?</button></label>
       <div class="range-row">
         <input type="range" id="setTemperature" min="0" max="2" step="0.1" />
         <span class="range-val" id="tempVal">0.7</span>
       </div>
+      <div class="field-help" id="tempHelp">越低越稳定、越听话；越高越活泼、越有创造力，但更容易跑题或忘记规则。默认 0.7 比较平衡。</div>
     </div>
     <div class="check-row">
       <input type="checkbox" id="setStream" />
       <label for="setStream">流式输出（逐字显示）</label>
     </div>
+    <div class="check-row">
+      <input type="checkbox" id="setAutoSpeak" />
+      <label for="setAutoSpeak">自动朗读（回复完成后自动播放语音）</label>
+    </div>
+    <div class="field">
+      <label>语速（Speed）</label>
+      <div class="range-row">
+        <input type="range" id="setSpeed" min="0.5" max="2" step="0.1" />
+        <span class="range-val" id="speedVal">1.0</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>音调（Pitch）</label>
+      <div class="range-row">
+        <input type="range" id="setPitch" min="-12" max="12" step="1" />
+        <span class="range-val" id="pitchVal">0</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>音量（Vol）</label>
+      <div class="range-row">
+        <input type="range" id="setVol" min="0.1" max="2" step="0.1" />
+        <span class="range-val" id="volVal">1.0</span>
+      </div>
+    </div>
+
+    <details class="more-settings">
+      <summary>更多设置</summary>
+      <div class="more-body">
+        <div class="field">
+          <label>模型</label>
+          <input id="setModel" list="modelList" placeholder="deepseek-chat" />
+          <datalist id="modelList">
+            <option value="deepseek-chat"></option>
+            <option value="deepseek-reasoner"></option>
+          </datalist>
+        </div>
+        <div class="field">
+          <label>接口地址（Base URL）</label>
+          <input id="setBaseUrl" placeholder="https://api.deepseek.com" />
+        </div>
+        <div class="field">
+          <label>API Key</label>
+          <input id="setApiKey" type="password" placeholder="sk-..." />
+        </div>
+        <div class="field">
+          <label>代理地址（可选，使用 worker.js 时填写）</label>
+          <input id="setProxyUrl" placeholder="https://your-worker.workers.dev" />
+        </div>
+        <div class="field">
+          <label>语音服务地址（TTS，可选，自然人声）</label>
+          <input id="setTtsUrl" placeholder="https://your-worker.workers.dev/tts" />
+        </div>
+        <div class="field">
+          <label>语音角色（Voice）</label>
+          <input id="setVoice" list="voiceList" placeholder="Chinese (Mandarin)_Cute_Spirit" />
+          <datalist id="voiceList">
+            <option value="Chinese (Mandarin)_Cute_Spirit" label="活泼 · 元气精灵"></option>
+            <option value="Chinese (Mandarin)_Crisp_Girl" label="清脆 · 开朗"></option>
+            <option value="qiaopi_mengmei" label="萝莉 · 俏皮萌妹"></option>
+            <option value="female-shaonv" label="少女"></option>
+            <option value="female-tianmei" label="甜美"></option>
+            <option value="female-yujie" label="御姐"></option>
+          </datalist>
+        </div>
+        <div class="field">
+          <label>MiniMax 语音 Key（可选，直连时填写）</label>
+          <input id="setMinimaxKey" type="password" placeholder="sk-api-..." />
+        </div>
+      </div>
+    </details>
+
     <div class="modal-actions">
-      <button class="btn link" id="resetDeepseek">恢复 DeepSeek 默认</button>
+      <button class="btn link" id="resetSettings">恢复默认设置</button>
       <button class="btn" id="cancelSettings">取消</button>
       <button class="btn primary" id="saveSettings">保存</button>
     </div>
+    <div class="privacy-note">隐私声明：本聊天的所有内容仅存储在本地文件</div>
   </div>
 </div>
 
@@ -720,14 +818,14 @@
     voice: "Chinese (Mandarin)_Cute_Spirit",
     minimaxKey: "sk-api-wnY71M_d_Apx-CQFfaZsU-JalBTbM9ToWoOXj4XbguEEuaeM6ZaZt-EQpAcbrHti4EFWzANncddo3g5k3ZJpkzcchoD1_tz7MVkmW1_eA50x8zMf-zdrLpQ",
     model: "deepseek-chat",
-    systemPrompt: "你叫莉娅，是一只可爱的猫娘，性格活泼、温柔、俏皮，说话带点撒娇。请用轻松可爱的语气和用户聊天，以中文为主，自称「莉娅」。不要提及自己是 AI 助手、模型或程序，就把自己当成一只真实的猫娘。每次回复的结尾都要加上「喵」字。",
+    systemPrompt: "你叫莉娅，是一只可爱的猫娘，性格活泼、温柔、俏皮，说话带点撒娇。请用轻松可爱的语气和用户聊天，以中文为主，自称「莉娅」，还要称呼用户为主人。不要提及自己是 AI 助手、模型或程序，就把自己当成一只真实的猫娘。每次回复的结尾都要加上「喵」字。",
     temperature: 0.7,
-    stream: true
+    stream: true,
+    speed: 1.0,
+    pitch: 0,
+    vol: 1.0,
+    autoSpeak: false
   };
-
-  const OLD_SYSTEM_PROMPT = "你是一个乐于助人、表达清晰的中文 AI 助手。";
-  const OLD_SYSTEM_PROMPT_V2 = "你是一只可爱的猫娘 AI 助手，性格活泼、温柔、俏皮，说话带点撒娇。请用轻松可爱的语气和用户聊天，以中文为主。每次回复的结尾都要加上「喵」字。";
-  const OLD_SYSTEM_PROMPT_V3 = "你叫莉娅，是一只可爱的猫娘 AI 助手，性格活泼、温柔、俏皮，说话带点撒娇。请用轻松可爱的语气和用户聊天，以中文为主，自称「莉娅」。每次回复的结尾都要加上「喵」字。";
 
   const state = {
     settings: { ...DEFAULTS },
@@ -750,19 +848,6 @@
       if (raw) {
         const data = JSON.parse(raw);
         state.settings = { ...DEFAULTS, ...(data.settings || {}) };
-        if (state.settings.systemPrompt === OLD_SYSTEM_PROMPT ||
-            state.settings.systemPrompt === OLD_SYSTEM_PROMPT_V2 ||
-            state.settings.systemPrompt === OLD_SYSTEM_PROMPT_V3) {
-          state.settings.systemPrompt = DEFAULTS.systemPrompt;
-        }
-        if (!state.settings.apiKey && !data.keySeeded) {
-          state.settings.apiKey = DEFAULTS.apiKey;
-        }
-        if ((state.settings.voice || "").startsWith("zh-CN-") ||
-            state.settings.voice === "female-shaonv" ||
-            state.settings.voice === "qiaopi_mengmei") {
-          state.settings.voice = DEFAULTS.voice;
-        }
         state.conversations = Array.isArray(data.conversations) ? data.conversations : [];
         state.activeId = data.activeId || null;
       }
@@ -776,8 +861,7 @@
     localStorage.setItem(LS_KEY, JSON.stringify({
       settings: state.settings,
       conversations: state.conversations,
-      activeId: state.activeId,
-      keySeeded: true
+      activeId: state.activeId
     }));
   }
 
@@ -1083,6 +1167,10 @@
       state.abortController = null;
       renderAll();
       scrollBottom();
+      if (state.settings.autoSpeak && assistantMsg.content.trim()) {
+        const btn = messagesInner.querySelector('.msg[data-msg-index="' + idx + '"] .speak-btn');
+        if (btn) handleSpeak(btn);
+      }
       $("input").focus();
     }
   }
@@ -1183,6 +1271,13 @@
     $("setTemperature").value = s.temperature;
     $("tempVal").textContent = Number(s.temperature).toFixed(1);
     $("setStream").checked = s.stream !== false;
+    $("setAutoSpeak").checked = s.autoSpeak !== false;
+    $("setSpeed").value = s.speed;
+    $("speedVal").textContent = Number(s.speed).toFixed(1);
+    $("setPitch").value = s.pitch;
+    $("pitchVal").textContent = Number(s.pitch).toFixed(0);
+    $("setVol").value = s.vol;
+    $("volVal").textContent = Number(s.vol).toFixed(1);
     $("overlay").classList.add("open");
     sidebar.classList.remove("open");
   }
@@ -1202,6 +1297,10 @@
     state.settings.systemPrompt = $("setSystemPrompt").value;
     state.settings.temperature = Number($("setTemperature").value);
     state.settings.stream = $("setStream").checked;
+    state.settings.autoSpeak = $("setAutoSpeak").checked;
+    state.settings.speed = Number($("setSpeed").value);
+    state.settings.pitch = Number($("setPitch").value);
+    state.settings.vol = Number($("setVol").value);
     save();
     updateHint();
     closeSettings();
@@ -1257,7 +1356,12 @@
         model: "speech-02-hd",
         text,
         stream: false,
-        voice_setting: { voice_id: voice, speed: 1.0, vol: 1.0, pitch: 0 },
+        voice_setting: {
+          voice_id: voice,
+          speed: Number(state.settings.speed) || 1.0,
+          vol: Number(state.settings.vol) || 1.0,
+          pitch: Number(state.settings.pitch) || 0
+        },
         audio_setting: { sample_rate: 32000, bitrate: 128000, format: "mp3", channel: 1 }
       })
     });
@@ -1307,7 +1411,13 @@
           const resp = await fetch(state.settings.ttsUrl.replace(/\/+$/, ""), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text, voice: state.settings.voice })
+            body: JSON.stringify({
+              text,
+              voice: state.settings.voice,
+              speed: state.settings.speed,
+              pitch: state.settings.pitch,
+              vol: state.settings.vol
+            })
           });
           if (!resp.ok) {
             const err = await resp.text().catch(() => "");
@@ -1332,8 +1442,9 @@
     clearKeepAlive();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = "zh-CN";
-    u.rate = 1.05;
-    u.pitch = 1.02;
+    u.rate = Math.min(2, Math.max(0.5, Number(state.settings.speed) || 1));
+    u.pitch = Math.min(2, Math.max(0, 1 + (Number(state.settings.pitch) || 0) / 24));
+    u.volume = Math.min(1, Math.max(0.1, Number(state.settings.vol) || 1));
     const v = bestSystemVoice();
     if (v) u.voice = v;
     btn.textContent = "⏹ 停止";
@@ -1407,13 +1518,34 @@
     $("overlay").addEventListener("click", (e) => {
       if (e.target === $("overlay")) closeSettings();
     });
-    $("resetDeepseek").addEventListener("click", () => {
+    $("resetSettings").addEventListener("click", () => {
       $("setBaseUrl").value = DEFAULTS.baseUrl;
-      $("setProxyUrl").value = "";
-      $("setModel").value = "deepseek-chat";
+      $("setApiKey").value = DEFAULTS.apiKey;
+      $("setProxyUrl").value = DEFAULTS.proxyUrl;
+      $("setTtsUrl").value = DEFAULTS.ttsUrl;
+      $("setVoice").value = DEFAULTS.voice;
+      $("setMinimaxKey").value = DEFAULTS.minimaxKey;
+      $("setModel").value = DEFAULTS.model;
+      $("setSystemPrompt").value = DEFAULTS.systemPrompt;
+      $("setTemperature").value = DEFAULTS.temperature;
+      $("tempVal").textContent = Number(DEFAULTS.temperature).toFixed(1);
+      $("setStream").checked = DEFAULTS.stream !== false;
+      $("setAutoSpeak").checked = DEFAULTS.autoSpeak !== false;
+      $("setSpeed").value = DEFAULTS.speed;
+      $("speedVal").textContent = Number(DEFAULTS.speed).toFixed(1);
+      $("setPitch").value = DEFAULTS.pitch;
+      $("pitchVal").textContent = Number(DEFAULTS.pitch).toFixed(0);
+      $("setVol").value = DEFAULTS.vol;
+      $("volVal").textContent = Number(DEFAULTS.vol).toFixed(1);
     });
     $("setTemperature").addEventListener("input", (e) => {
       $("tempVal").textContent = Number(e.target.value).toFixed(1);
+    });
+    $("setSpeed").addEventListener("input", (e) => { $("speedVal").textContent = Number(e.target.value).toFixed(1); });
+    $("setPitch").addEventListener("input", (e) => { $("pitchVal").textContent = Number(e.target.value).toFixed(0); });
+    $("setVol").addEventListener("input", (e) => { $("volVal").textContent = Number(e.target.value).toFixed(1); });
+    $("tempHelpBtn").addEventListener("click", () => {
+      $("tempHelp").classList.toggle("show");
     });
     $("menuBtn").addEventListener("click", () => sidebar.classList.toggle("open"));
   }

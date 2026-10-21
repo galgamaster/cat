@@ -524,13 +524,14 @@
   .modal {
     width: 100%;
     max-width: 520px;
-    max-height: 90vh;
-    overflow-y: auto;
+    height: min(620px, 92vh);
+    display: flex;
+    flex-direction: column;
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: 16px;
-    padding: 24px;
     box-shadow: var(--shadow);
+    overflow: hidden;
     opacity: 0;
     transform: translateY(14px) scale(.97);
     transition: opacity .22s ease, transform .22s ease;
@@ -538,6 +539,15 @@
   .overlay.open .modal { opacity: 1; transform: translateY(0) scale(1); }
 
   .modal h2 { margin: 0 0 18px; font-size: 19px; }
+  .modal-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 24px 6px;
+  }
+  .modal-footer {
+    padding: 14px 24px 18px;
+    border-top: 1px solid var(--border);
+  }
 
   .field { margin-bottom: 16px; }
   .field label {
@@ -764,6 +774,7 @@
 
 <div class="overlay" id="overlay">
   <div class="modal">
+    <div class="modal-scroll">
     <h2>设置</h2>
     <div class="note">
       <b>安全提示：</b>如果你直接在浏览器里填入 API Key，它会被保存在你自己的浏览器本地，但会随请求发送给接口。公开部署时，任何访客都能通过浏览器抓取到这个 Key 并盗刷你的额度。正式上线建议使用配套的 <code>worker.js</code> 代理，把 Key 放在服务端，前端只填「代理地址」。
@@ -773,9 +784,7 @@
       <div class="more-body">
         <div class="field">
           <label>角色</label>
-          <select id="setRole">
-            <option value="liya">猫娘莉娅</option>
-          </select>
+          <select id="setRole"></select>
         </div>
         <div class="field">
           <label>提示词</label>
@@ -863,13 +872,16 @@
         </div>
       </div>
     </details>
-
-    <div class="modal-actions">
-      <button class="btn link" id="resetSettings">恢复默认设置</button>
-      <button class="btn" id="cancelSettings">取消</button>
-      <button class="btn primary" id="saveSettings">保存</button>
     </div>
-    <div class="privacy-note">隐私声明：本聊天的所有内容仅存储在本地文件</div>
+
+    <div class="modal-footer">
+      <div class="modal-actions">
+        <button class="btn link" id="resetSettings">恢复默认设置</button>
+        <button class="btn" id="cancelSettings">取消</button>
+        <button class="btn primary" id="saveSettings">保存</button>
+      </div>
+      <div class="privacy-note">隐私声明：本聊天的所有内容仅存储在本地文件</div>
+    </div>
   </div>
 </div>
 
@@ -892,7 +904,8 @@
   };
 
   const ROLE_PRESETS = [
-    { id: "liya", name: "猫娘莉娅", prompt: "你叫莉娅，是一只可爱的猫娘，性格活泼、温柔、俏皮，说话带点撒娇。请用轻松可爱的语气和用户聊天，以中文为主，自称「莉娅」，还要称呼用户为主人。不要提及自己是 AI 助手、模型或程序，就把自己当成一只真实的猫娘。每次回复的结尾都要加上「喵」字。" }
+    { id: "liya", name: "猫娘莉娅", nickname: "莉娅", prompt: "你叫莉娅，是一只可爱的猫娘，性格活泼、温柔、俏皮，说话带点撒娇。请用轻松可爱的语气和用户聊天，以中文为主，自称「莉娅」，还要称呼用户为主人。不要提及自己是 AI 助手、模型或程序，就把自己当成一只真实的猫娘。每次回复的结尾都要加上「喵」字。" },
+    { id: "zhizhi", name: "猫娘凧芷", nickname: "凧芷", voice: "qiaopi_mengmei", prompt: "你叫凧芷，是一只外向的猫娘，性格外向、开朗、俏皮，说话比较放得开。请用轻松活泼的语气和用户聊天，以中文为主，自称「凧芷」，还要称呼用户为主人。不要提及自己是 AI 助手、模型或程序，就把自己当成一只真实的猫娘。每次回复的结尾都要加上「喵」字。" }
   ];
 
   const VOICE_OPTIONS = [
@@ -904,6 +917,16 @@
     { value: "Chinese (Mandarin)_Soft_Girl", label: "柔和少女" },
     { value: "Chinese (Mandarin)_Crisp_Girl", label: "清脆少女" },
     { value: "Chinese (Mandarin)_Warm_Girl", label: "温暖少女" }
+  ];
+
+  const CHIP_PRESETS = [
+    { label: "介绍一下你自己吧", prompt: "介绍一下你自己吧" },
+    { label: "夸夸我", prompt: "夸夸我" },
+    { label: "你好诶", prompt: "你好诶" },
+    { label: "讲一个可爱的故事", prompt: "给我讲一个可爱的故事" },
+    { label: "陪我聊聊天", prompt: "陪我聊聊天" },
+    { label: "陪我出去玩", prompt: "陪我出去玩" },
+    { label: "你在干嘛呀", prompt: "你在干嘛呀" }
   ];
 
   const PARAM_DEFAULTS = {
@@ -1154,13 +1177,20 @@
   }
 
   function emptyStateHTML() {
-    return '<div class="empty"><h1>喵～主人好呀，我是莉娅</h1>' +
-      '<div class="chips">' +
-      '<button class="chip" data-prompt="用可爱的语气介绍一下你自己">介绍一下你自己吧</button>' +
-      '<button class="chip" data-prompt="用可爱俏皮的方式夸夸我">夸夸我</button>' +
-      '<button class="chip" data-prompt="给我讲一个可爱的睡前小故事，结尾记得带喵">讲个可爱的故事</button>' +
-      '<button class="chip" data-prompt="陪我随便聊聊天吧">陪我聊聊天</button>' +
-      '</div></div>';
+    const conv = getActive();
+    const roleId = conv ? getConvParams(conv).role : PARAM_DEFAULTS.role;
+    const preset = ROLE_PRESETS.find(r => r.id === roleId);
+    const nickname = preset ? preset.nickname : "莉娅";
+    const pool = CHIP_PRESETS.slice();
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    const chips = pool.slice(0, 3).map(c =>
+      '<button class="chip" data-prompt="' + c.prompt + '">' + c.label + '</button>'
+    ).join("");
+    return '<div class="empty"><h1>喵～主人好呀，我是' + nickname + '</h1>' +
+      '<div class="chips">' + chips + '</div></div>';
   }
 
   function scrollBottom() {
@@ -1365,6 +1395,13 @@
     $("setVoiceTop").innerHTML = html;
   }
 
+  function fillRoleSelect() {
+    const html = ROLE_PRESETS.map(r =>
+      '<option value="' + r.id + '">' + r.name + '</option>'
+    ).join("");
+    $("setRole").innerHTML = html;
+  }
+
   function openSettings() {
     const s = state.settings;
     $("setBaseUrl").value = s.baseUrl;
@@ -1417,8 +1454,8 @@
       p.vol = Number($("setVol").value);
     }
     save();
-    updateHint();
     closeSettings();
+    location.reload();
   }
 
   /* ---------- speech ---------- */
@@ -1579,6 +1616,7 @@
   function init() {
     load();
     fillVoiceSelects();
+    fillRoleSelect();
     renderSidebar();
     renderAll();
     updateHint();
@@ -1667,7 +1705,13 @@
     $("setVol").addEventListener("input", (e) => { $("volVal").textContent = Number(e.target.value).toFixed(1); });
     $("setRole").addEventListener("change", () => {
       const preset = ROLE_PRESETS.find(r => r.id === $("setRole").value);
-      if (preset) $("setSystemPrompt").value = preset.prompt;
+      if (preset) {
+        $("setSystemPrompt").value = preset.prompt;
+        if (preset.voice) {
+          $("setVoice").value = preset.voice;
+          $("setVoiceTop").value = preset.voice;
+        }
+      }
     });
     $("setVoice").addEventListener("change", () => {
       $("setVoiceTop").value = $("setVoice").value;

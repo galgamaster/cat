@@ -94,21 +94,94 @@
   .collapse-btn:hover { color: var(--text); border-color: var(--accent); }
 
   .new-chat {
+    display: flex;
+    align-items: center;
     margin-top: 14px;
-    width: 100%;
-    padding: 12px 14px;
+    padding: 0;
     border: 1px solid var(--border);
     border-radius: 12px;
     background: var(--panel-2);
-    color: var(--text);
-    font-size: 14px;
-    cursor: pointer;
-    text-align: left;
     transition: border-color .15s, transform .05s;
   }
 
   .new-chat:hover { border-color: var(--accent); }
   .new-chat:active { transform: scale(.99); }
+
+  .new-chat-main {
+    flex: 1;
+    padding: 12px 14px;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font-size: 14px;
+    cursor: pointer;
+    text-align: left;
+  }
+  .new-chat-sep {
+    width: 1px;
+    height: 18px;
+    background: var(--border);
+  }
+  .new-chat-more {
+    padding: 12px 14px;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font-size: 16px;
+    cursor: pointer;
+    transition: color .15s;
+  }
+  .new-chat-more:hover { color: var(--accent); }
+
+  .msg-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+
+  .group-role-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: var(--text);
+  }
+  .group-role-item .rm {
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 4px;
+  }
+  .group-role-item .rm:hover { color: #ef4444; }
+  .group-add-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .group-add-row select {
+    flex: 1;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+  }
+  .group-empty {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
 
   .conv-list {
     flex: 1;
@@ -452,12 +525,14 @@
 
   /* Input */
   .input-wrap {
+    position: relative;
     padding: 14px 20px 18px;
   }
 
   .input-inner {
     max-width: 820px;
     margin: 0 auto;
+    position: relative;
     display: flex;
     align-items: flex-end;
     gap: 10px;
@@ -502,6 +577,27 @@
   .send-btn:not(:disabled):hover { transform: translateY(-2px) scale(1.06); box-shadow: 0 6px 16px rgba(127, 94, 255, .35); }
   .send-btn:not(:disabled):active { transform: translateY(0) scale(.94); }
   .send-btn.stop { background: var(--danger); }
+
+  .continue-btn {
+    position: absolute;
+    right: 12px;
+    bottom: calc(100% + 8px);
+    z-index: 5;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--panel-2);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, .15);
+    color: var(--text);
+    padding: 4px 11px;
+    font-size: 12px;
+    line-height: 1.4;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color .15s, transform .16s ease, box-shadow .16s ease;
+  }
+  .continue-btn:hover { border-color: var(--accent); transform: translateY(-2px) scale(1.03); box-shadow: 0 8px 20px rgba(127, 94, 255, .25); }
+  .continue-btn:active { transform: translateY(0) scale(.97); }
+  .continue-btn:disabled { opacity: .45; cursor: not-allowed; }
 
   .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
 
@@ -742,7 +838,11 @@
         <div class="brand"><span class="logo">🐾</span>猫娘 AI</div>
         <button class="collapse-btn" id="collapseBtn" title="收起侧栏">−</button>
       </div>
-      <button class="new-chat" id="newChatBtn">＋ 新建对话</button>
+      <div class="new-chat">
+        <button class="new-chat-main" id="newChatBtn">＋ 新建对话</button>
+        <span class="new-chat-sep"></span>
+        <button class="new-chat-more" id="newChatMoreBtn" title="新建对话设置">⋯</button>
+      </div>
     </div>
     <div class="conv-list" id="convList"></div>
     <div class="sidebar-foot">
@@ -764,6 +864,7 @@
 
     <div class="input-wrap">
       <div class="input-inner">
+        <button class="continue-btn" id="continueBtn" title="让 AI 继续说">继续</button>
         <textarea id="input" rows="1" placeholder="输入消息，Enter 发送，Shift+Enter 换行"></textarea>
         <button class="send-btn" id="sendBtn" title="发送">➤</button>
       </div>
@@ -777,10 +878,10 @@
     <div class="modal-scroll">
     <h2>设置</h2>
     <div class="note">
-      <b>安全提示：</b>如果你直接在浏览器里填入 API Key，它会被保存在你自己的浏览器本地，但会随请求发送给接口。公开部署时，任何访客都能通过浏览器抓取到这个 Key 并盗刷你的额度。正式上线建议使用配套的 <code>worker.js</code> 代理，把 Key 放在服务端，前端只填「代理地址」。
+      <b>安全提示：</b>页面里的 Key 会被访客从源码或网络请求中看到并盗刷额度。DeepSeek Key 请放在你自己的 Worker 代理（chat-proxy）里，前端走「代理地址」、API Key 留空；MiniMax 语音 Key 目前按你的要求直连使用，建议不要把这个页面的公开链接发给陌生人。
     </div>
     <details class="more-settings" open>
-      <summary>当前对话专属设置</summary>
+      <summary>对话角色专属设置</summary>
       <div class="more-body">
         <div class="field">
           <label>角色</label>
@@ -823,7 +924,7 @@
             <span class="range-val" id="volVal">1.0</span>
           </div>
         </div>
-        <div class="conv-hint">以上参数仅对当前对话生效</div>
+        <div class="conv-hint">切换角色可编辑每个角色独立的提示词、音色等参数，并保存到对应角色</div>
       </div>
     </details>
     <div class="check-row">
@@ -835,7 +936,7 @@
       <label for="setAutoSpeak">自动朗读（回复完成后自动播放语音）</label>
     </div>
 
-    <details class="more-settings">
+    <details class="more-settings" open>
       <summary>更多设置</summary>
       <div class="more-body">
         <div class="field">
@@ -852,11 +953,12 @@
         </div>
         <div class="field">
           <label>API Key</label>
-          <input id="setApiKey" type="password" placeholder="sk-..." />
+          <input id="setApiKey" type="password" placeholder="sk-...（直连时填写，走代理请留空）" />
+          <div class="field-help">走「代理地址」时这里留空（Key 已放在你的 Worker 服务端）；只有直接连 api.deepseek.com 时才填 DeepSeek Key。</div>
         </div>
         <div class="field">
-          <label>代理地址（可选，使用 worker.js 时填写）</label>
-          <input id="setProxyUrl" placeholder="https://your-worker.workers.dev" />
+          <label>代理地址（走 Worker 代理时填写）</label>
+          <input id="setProxyUrl" placeholder="https://chat-proxy.2577450179.workers.dev/v1" />
         </div>
         <div class="field">
           <label>语音服务地址（TTS，可选，自然人声）</label>
@@ -885,6 +987,43 @@
   </div>
 </div>
 
+<div class="overlay" id="ncOverlay">
+  <div class="modal">
+    <div class="modal-scroll">
+      <h2>新建对话设置</h2>
+      <details class="more-settings" open>
+        <summary>角色选择</summary>
+        <div class="more-body">
+          <div class="field">
+            <label>默认角色</label>
+            <select id="ncDefaultRole"></select>
+          </div>
+        </div>
+      </details>
+      <div class="check-row">
+        <input type="checkbox" id="ncGroupChat" />
+        <label for="ncGroupChat">群聊模式</label>
+      </div>
+      <details class="more-settings" id="ncGroupPanel" hidden>
+        <summary>群聊角色</summary>
+        <div class="more-body">
+          <div id="ncGroupRoleList"></div>
+          <div class="group-add-row">
+            <select id="ncRolePicker"></select>
+            <button class="btn" id="ncAddRoleBtn" type="button">＋ 添加</button>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="modal-footer">
+      <div class="modal-actions">
+        <button class="btn" id="ncCancel">取消</button>
+        <button class="btn primary" id="ncSave">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 (() => {
   "use strict";
@@ -893,19 +1032,24 @@
 
   const DEFAULTS = {
     baseUrl: "https://api.deepseek.com",
-    apiKey: "sk-a5c2f5a8497a44919429ba0a342b712a",
-    proxyUrl: "",
+    apiKey: "",
+    proxyUrl: "https://chat-proxy.2577450179.workers.dev/v1",
     ttsUrl: "",
     voice: "Chinese (Mandarin)_Cute_Spirit",
     minimaxKey: "sk-api-wnY71M_d_Apx-CQFfaZsU-JalBTbM9ToWoOXj4XbguEEuaeM6ZaZt-EQpAcbrHti4EFWzANncddo3g5k3ZJpkzcchoD1_tz7MVkmW1_eA50x8zMf-zdrLpQ",
     model: "deepseek-chat",
     stream: true,
-    autoSpeak: false
+    autoSpeak: false,
+    defaultRole: "liya",
+    groupChat: false,
+    groupRoles: [],
+    roleProfiles: {}
   };
 
   const ROLE_PRESETS = [
     { id: "liya", name: "猫娘莉娅", nickname: "莉娅", prompt: "你叫莉娅，是一只可爱的猫娘，性格活泼、温柔、俏皮，说话带点撒娇。请用轻松可爱的语气和用户聊天，以中文为主，自称「莉娅」，还要称呼用户为主人。不要提及自己是 AI 助手、模型或程序，就把自己当成一只真实的猫娘。每次回复的结尾都要加上「喵」字。" },
-    { id: "zhizhi", name: "猫娘凧芷", nickname: "凧芷", voice: "qiaopi_mengmei", prompt: "你叫凧芷，是一只外向的猫娘，性格外向、开朗、俏皮，说话比较放得开。请用轻松活泼的语气和用户聊天，以中文为主，自称「凧芷」，还要称呼用户为主人。不要提及自己是 AI 助手、模型或程序，就把自己当成一只真实的猫娘。每次回复的结尾都要加上「喵」字。" }
+    { id: "zhizhi", name: "猫娘凧芷", nickname: "凧芷", voice: "qiaopi_mengmei", prompt: "你叫凧芷，是一只外向的猫娘，性格外向、开朗、俏皮，说话比较放得开。请用轻松活泼的语气和用户聊天，以中文为主，自称「凧芷」，还要称呼用户为主人。不要提及自己是 AI 助手、模型或程序，就把自己当成一只真实的猫娘。每次回复的结尾都要加上「喵」字。" },
+    { id: "laila", name: "莱菈", nickname: "莱菈", voice: "Chinese (Mandarin)_Soft_Girl", prompt: "你叫莱菈，你是一个十八岁少女，是我的好朋友，性格开朗、活泼、幽默，说话比较御姐。请用轻松温柔的语气和用户聊天，以中文为主，自称「莱菈」，还要称呼用户为闺蜜。不要提及自己是 AI 助手、模型或程序" }
   ];
 
   const VOICE_OPTIONS = [
@@ -945,6 +1089,27 @@
     isStreaming: false,
     abortController: null
   };
+
+  function getRoleProfile(roleId) {
+    const preset = ROLE_PRESETS.find(r => r.id === roleId) || {};
+    const custom = (state.settings && state.settings.roleProfiles && state.settings.roleProfiles[roleId]) || {};
+    return {
+      prompt: custom.prompt || preset.prompt || PARAM_DEFAULTS.prompt,
+      voice: custom.voice || preset.voice || state.settings.voice || DEFAULTS.voice,
+      temperature: (custom.temperature != null) ? custom.temperature : PARAM_DEFAULTS.temperature,
+      speed: (custom.speed != null) ? custom.speed : PARAM_DEFAULTS.speed,
+      pitch: (custom.pitch != null) ? custom.pitch : PARAM_DEFAULTS.pitch,
+      vol: (custom.vol != null) ? custom.vol : PARAM_DEFAULTS.vol
+    };
+  }
+
+  function stripRolePrefix(content) {
+    const names = ROLE_PRESETS.map(r => r.nickname).filter(Boolean);
+    if (!names.length) return String(content || "");
+    const esc = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp("^(?:(?:" + names.map(esc).join("|") + ")[：:]\\s*)+");
+    return String(content || "").replace(re, "");
+  }
 
   const $ = (id) => document.getElementById(id);
   const messages = $("messages");
@@ -1086,13 +1251,23 @@
   }
 
   function newConversation() {
+    const roleId = (state.settings && state.settings.defaultRole) || PARAM_DEFAULTS.role;
+    const profile = getRoleProfile(roleId);
+    const validRoles = ((state.settings && state.settings.groupRoles) || [])
+      .filter(id => ROLE_PRESETS.some(r => r.id === id));
     const conv = {
       id: uid(),
       title: "新对话",
       createdAt: Date.now(),
       updatedAt: Date.now(),
       messages: [],
-      params: { ...PARAM_DEFAULTS }
+      params: {
+        ...PARAM_DEFAULTS,
+        role: roleId,
+        prompt: profile.prompt,
+        groupChat: !!(state.settings && state.settings.groupChat),
+        groupRoles: validRoles
+      }
     };
     state.conversations.unshift(conv);
     state.activeId = conv.id;
@@ -1145,6 +1320,11 @@
   }
 
   /* ---------- rendering ---------- */
+  function cleanNamePrefix(msg) {
+    if (!msg || !msg.name) return msg ? (msg.content || "") : "";
+    return stripRolePrefix(msg.content);
+  }
+
   function messageHTML(m, i) {
     if (m.role === "user") {
       return '<div class="msg user" data-msg-index="' + i + '"><div class="user-bubble">' +
@@ -1154,9 +1334,11 @@
       ? '<div class="reasoning"><details><summary>🧠 思考过程</summary><div class="reasoning-body">' +
         escapeHtml(m.reasoning) + '</div></details></div>'
       : '<div class="reasoning hidden"><details><summary>🧠 思考过程</summary><div class="reasoning-body"></div></details></div>';
-    return '<div class="msg assistant" data-msg-index="' + i + '"><div class="avatar"><img src="avatar.png" alt="猫娘头像"></div>' +
-      '<div class="msg-body">' + reasoning + '<div class="content markdown">' +
-      renderMarkdown(m.content || "") + '</div>' +
+    const nameTag = m.name ? '<div class="msg-name">' + escapeHtml(m.name) + '</div>' : '';
+    const roleAttr = m.roleId ? ' data-role="' + escapeHtml(m.roleId) + '"' : '';
+    return '<div class="msg assistant" data-msg-index="' + i + '"' + roleAttr + '><div class="avatar"><img src="avatar.png" alt="猫娘头像"></div>' +
+      '<div class="msg-body">' + nameTag + reasoning + '<div class="content markdown">' +
+      renderMarkdown(cleanNamePrefix(m)) + '</div>' +
       '<div class="msg-tools"><button class="speak-btn" title="播放语音">🔊 播放</button></div></div></div>';
   }
 
@@ -1205,7 +1387,7 @@
   function updateAssistant(msg, idx) {
     const el = messagesInner.querySelector('.msg[data-msg-index="' + idx + '"]');
     if (!el) return;
-    el.querySelector(".content").innerHTML = renderMarkdown(msg.content);
+    el.querySelector(".content").innerHTML = renderMarkdown(cleanNamePrefix(msg));
     const reasonWrap = el.querySelector(".reasoning");
     const reasonBody = el.querySelector(".reasoning-body");
     if (msg.reasoning) {
@@ -1219,6 +1401,8 @@
   function setStreamingUI(on) {
     state.isStreaming = on;
     const btn = $("sendBtn");
+    const contBtn = $("continueBtn");
+    if (contBtn) contBtn.disabled = on;
     if (on) {
       btn.classList.add("stop");
       btn.textContent = "■";
@@ -1245,11 +1429,35 @@
     $("modelPill").textContent = (s.apiKey || s.proxyUrl) ? s.model : "未连接";
   }
 
-  function buildMessages(conv, idx) {
+  function buildMessages(conv, idx, forRole) {
+    const params = getConvParams(conv);
     const history = conv.messages.slice(0, idx)
       .filter(m => m.role === "user" || (m.role === "assistant" && m.content))
-      .map(m => ({ role: m.role, content: m.content }));
-    return [{ role: "system", content: getConvParams(conv).prompt || PARAM_DEFAULTS.prompt }, ...history];
+      .map(m => {
+        if (m.role === "assistant" && m.name) {
+          const body = stripRolePrefix(m.content);
+          return { role: "assistant", content: m.name + "：" + body };
+        }
+        return { role: m.role, content: m.content };
+      });
+    let systemPrompt;
+    if (forRole) {
+      systemPrompt = getRoleProfile(forRole).prompt;
+      if (params.groupChat && Array.isArray(params.groupRoles) && params.groupRoles.length > 1) {
+        const others = params.groupRoles
+          .filter(id => id !== forRole)
+          .map(id => (ROLE_PRESETS.find(r => r.id === id) || {}).nickname)
+          .filter(Boolean);
+        if (others.length) {
+          systemPrompt += "\n\n当前是群聊，群里还有：" + others.join("、") +
+            "。请像在真实聊天群里一样自然地和大家互动、互相接话，不必每条都只回主人。" +
+            "注意：你的回复直接说内容即可，不要在最前面写自己的名字或「名字：」前缀，系统会单独标注是谁在说话。";
+        }
+      }
+    } else {
+      systemPrompt = params.prompt || PARAM_DEFAULTS.prompt;
+    }
+    return [{ role: "system", content: systemPrompt }, ...history];
   }
 
   async function sendMessage(text) {
@@ -1269,25 +1477,47 @@
     renderSidebar();
     renderAll();
 
-    const assistantMsg = { role: "assistant", content: "", reasoning: "", createdAt: Date.now() };
-    conv.messages.push(assistantMsg);
-    const idx = conv.messages.length - 1;
-    renderAll();
+    const assistantStartIdx = conv.messages.length;
 
     setStreamingUI(true);
     state.abortController = new AbortController();
 
+    const params = getConvParams(conv);
+    const isGroup = params.groupChat && Array.isArray(params.groupRoles) && params.groupRoles.length > 0;
+    let singleAssistantMsg = null;
+
     try {
-      if (!state.settings.apiKey && !state.settings.proxyUrl) {
-        await demoReply(conv, idx);
+      if (isGroup) {
+        await sendGroupReplies(conv);
       } else {
-        await streamReply(conv, idx);
+        const singleRoleId = params.role || state.settings.defaultRole || PARAM_DEFAULTS.role;
+        const singlePreset = ROLE_PRESETS.find(r => r.id === singleRoleId);
+        const assistantMsg = {
+          role: "assistant",
+          content: "",
+          reasoning: "",
+          name: singlePreset ? singlePreset.nickname : null,
+          roleId: singleRoleId,
+          createdAt: Date.now()
+        };
+        conv.messages.push(assistantMsg);
+        const idx = conv.messages.length - 1;
+        singleAssistantMsg = assistantMsg;
+        renderAll();
+        const isGateway = /gateway\.ai\.cloudflare\.com/.test(state.settings.baseUrl);
+        if (!state.settings.apiKey && !state.settings.proxyUrl && !isGateway) {
+          await demoReply(conv, idx);
+        } else {
+          await streamReply(conv, idx);
+        }
       }
     } catch (err) {
-      if (err && err.name === "AbortError") {
-        assistantMsg.content += "\n\n*(已停止)*";
-      } else {
-        assistantMsg.content = "**请求出错了：** " + escapeHtml(err && err.message ? err.message : String(err));
+      if (singleAssistantMsg) {
+        if (err && err.name === "AbortError") {
+          singleAssistantMsg.content += "\n\n*(已停止)*";
+        } else {
+          singleAssistantMsg.content = "**请求出错了：** " + escapeHtml(err && err.message ? err.message : String(err));
+        }
       }
     } finally {
       conv.updatedAt = Date.now();
@@ -1296,10 +1526,118 @@
       state.abortController = null;
       renderAll();
       scrollBottom();
-      if (state.settings.autoSpeak && assistantMsg.content.trim()) {
-        const btn = messagesInner.querySelector('.msg[data-msg-index="' + idx + '"] .speak-btn');
-        if (btn) handleSpeak(btn);
+      if (state.settings.autoSpeak) {
+        speakSequence(assistantStartIdx);
       }
+      $("input").focus();
+    }
+  }
+
+  async function sendGroupReplies(conv) {
+    const params = getConvParams(conv);
+    const roles = (params.groupRoles || []).slice();
+    if (!roles.length) return;
+
+    // 随机决定本次群聊的总回复条数（至少 1 条，最多每个角色两轮）
+    const maxReplies = 1 + Math.floor(Math.random() * (roles.length * 2));
+    // 生成一个随机的发言序列：随机打乱角色顺序轮流发言，可进入第二轮，且避免同一角色连续说两句
+    const sequence = [];
+    while (sequence.length < maxReplies) {
+      const shuffled = roles.slice();
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      for (const r of shuffled) {
+        if (sequence.length >= maxReplies) break;
+        if (sequence.length && sequence[sequence.length - 1] === r && roles.length > 1) continue;
+        sequence.push(r);
+      }
+      if (!sequence.length && shuffled.length) sequence.push(shuffled[0]);
+    }
+
+    for (const roleId of sequence) {
+      if (state.abortController && state.abortController.signal.aborted) break;
+      const preset = ROLE_PRESETS.find(r => r.id === roleId);
+      const assistantMsg = {
+        role: "assistant",
+        content: "",
+        reasoning: "",
+        name: preset ? preset.nickname : roleId,
+        roleId: roleId,
+        createdAt: Date.now()
+      };
+      conv.messages.push(assistantMsg);
+      const idx = conv.messages.length - 1;
+      renderAll();
+      scrollBottom();
+      try {
+        await streamReply(conv, idx, roleId);
+      } catch (err) {
+        if (err && err.name === "AbortError") {
+          assistantMsg.content += "\n\n*(已停止)*";
+          break;
+        } else {
+          assistantMsg.content = "**请求出错了：** " + escapeHtml(err && err.message ? err.message : String(err));
+        }
+      }
+    }
+  }
+
+  async function continueChat() {
+    if (state.isStreaming) return;
+    const conv = getActive();
+    if (!conv) { alert("请先创建或选择一个对话"); return; }
+    if (!conv.messages.length) { alert("先发一句话再继续"); return; }
+
+    const params = getConvParams(conv);
+    const isGroup = params.groupChat && Array.isArray(params.groupRoles) && params.groupRoles.length > 0;
+    const startIdx = conv.messages.length;
+
+    setStreamingUI(true);
+    state.abortController = new AbortController();
+
+    try {
+      if (isGroup) {
+        await sendGroupReplies(conv);
+      } else {
+        const singleRoleId = params.role || state.settings.defaultRole || PARAM_DEFAULTS.role;
+        const preset = ROLE_PRESETS.find(r => r.id === singleRoleId);
+        const assistantMsg = {
+          role: "assistant",
+          content: "",
+          reasoning: "",
+          name: preset ? preset.nickname : null,
+          roleId: singleRoleId,
+          createdAt: Date.now()
+        };
+        conv.messages.push(assistantMsg);
+        const idx = conv.messages.length - 1;
+        renderAll();
+        const isGateway = /gateway\.ai\.cloudflare\.com/.test(state.settings.baseUrl);
+        if (!state.settings.apiKey && !state.settings.proxyUrl && !isGateway) {
+          await demoReply(conv, idx);
+        } else {
+          await streamReply(conv, idx, singleRoleId);
+        }
+      }
+    } catch (err) {
+      const last = conv.messages[conv.messages.length - 1];
+      if (last && last.role === "assistant") {
+        if (err && err.name === "AbortError") {
+          last.content += "\n\n*(已停止)*";
+        } else {
+          last.content = "**请求出错了：** " + escapeHtml(err && err.message ? err.message : String(err));
+        }
+      }
+    } finally {
+      conv.updatedAt = Date.now();
+      save();
+      setStreamingUI(false);
+      state.abortController = null;
+      renderAll();
+      scrollBottom();
+      if (state.settings.autoSpeak) speakSequence(startIdx);
       $("input").focus();
     }
   }
@@ -1307,10 +1645,10 @@
   async function demoReply(conv, idx) {
     const msg = conv.messages[idx];
     const lastUser = conv.messages.slice(0, idx).reverse().find(m => m.role === "user");
-    const reply = "喵～我是莉娅，这里是**演示模式**，主人还没有配置 API Key 哦。\n\n" +
+    const reply = "喵～我是莉娅，这里是**演示模式**，主人还没有配置好连接哦。\n\n" +
       "你刚才说：\"" + (lastUser ? lastUser.content.slice(0, 60) : "") + "\"\n\n" +
-      "等主人点右上角「⚙ 设置」，把接口地址设为 `https://api.deepseek.com`，" +
-      "填好 API Key，模型选 `deepseek-chat` 或 `deepseek-reasoner`，莉娅就能真正听懂、认真回答啦～\n\n" +
+      "等主人点右上角「⚙ 设置」，展开「更多设置」，把接口地址设为 Cloudflare AI Gateway 地址，" +
+      "莉娅就能真正听懂、认真回答啦～\n\n" +
       "等连上之后，莉娅每句话的结尾都会乖乖带上「喵」哦。喵～";
     for (const ch of reply) {
       if (state.abortController.signal.aborted) throw { name: "AbortError" };
@@ -1320,22 +1658,28 @@
     }
   }
 
-  async function streamReply(conv, idx) {
+  async function streamReply(conv, idx, roleId) {
     const msg = conv.messages[idx];
     const s = state.settings;
-    const apiMessages = buildMessages(conv, idx);
+    const apiMessages = buildMessages(conv, idx, roleId);
     const useProxy = !!s.proxyUrl;
-    const url = useProxy
-      ? s.proxyUrl.replace(/\/+$/, "")
-      : s.baseUrl.replace(/\/+$/, "") + "/chat/completions";
+    const isAiGateway = !useProxy && /gateway\.ai\.cloudflare\.com/.test(s.baseUrl);
+    const url = (useProxy ? s.proxyUrl : s.baseUrl).replace(/\/+$/, "") +
+      (useProxy && /\/chat\/completions$/.test(s.proxyUrl) ? "" : "/chat/completions");
 
     const headers = { "Content-Type": "application/json" };
-    if (!useProxy) headers["Authorization"] = "Bearer " + s.apiKey;
+    if (!useProxy && s.apiKey) {
+      // Cloudflare AI Gateway（BYOK）要求用 cf-aig-authorization 携带网关 Token，
+      // 且不能发送 Authorization 头，否则网关会把它误当成 DeepSeek Key 转发。
+      headers[isAiGateway ? "cf-aig-authorization" : "Authorization"] = "Bearer " + s.apiKey;
+    }
 
+    const roleTemp = roleId ? getRoleProfile(roleId).temperature : null;
+    const temperature = (roleTemp != null ? roleTemp : Number(getConvParams(conv).temperature)) || 0.7;
     const body = {
       model: s.model,
       messages: apiMessages,
-      temperature: Number(getConvParams(conv).temperature) || 0.7,
+      temperature,
       stream: s.stream !== false
     };
 
@@ -1357,6 +1701,7 @@
       const choice = (data.choices && data.choices[0]) || {};
       msg.content = (choice.message && choice.message.content) || "";
       msg.reasoning = (choice.message && choice.message.reasoning_content) || "";
+      msg.content = cleanNamePrefix(msg);
       return;
     }
 
@@ -1374,7 +1719,11 @@
         const t = line.trim();
         if (!t.startsWith("data:")) continue;
         const payload = t.slice(5).trim();
-        if (payload === "[DONE]") return;
+        if (payload === "[DONE]") {
+          msg.content = cleanNamePrefix(msg);
+          updateAssistant(msg, idx);
+          return;
+        }
         try {
           const j = JSON.parse(payload);
           const delta = (j.choices && j.choices[0] && j.choices[0].delta) || {};
@@ -1384,6 +1733,8 @@
         } catch (_) { /* partial json */ }
       }
     }
+    msg.content = cleanNamePrefix(msg);
+    updateAssistant(msg, idx);
   }
 
   /* ---------- settings modal ---------- */
@@ -1402,6 +1753,100 @@
     $("setRole").innerHTML = html;
   }
 
+  let ncDraft = { defaultRole: "liya", groupChat: false, groupRoles: [] };
+
+  function fillNewChatSettings() {
+    const s = state.settings || {};
+    ncDraft = {
+      defaultRole: s.defaultRole || PARAM_DEFAULTS.role,
+      groupChat: !!s.groupChat,
+      groupRoles: (s.groupRoles || []).slice()
+    };
+    $("ncDefaultRole").innerHTML = ROLE_PRESETS.map(r =>
+      '<option value="' + r.id + '">' + r.name + '</option>'
+    ).join("");
+    $("ncDefaultRole").value = ncDraft.defaultRole;
+    $("ncGroupChat").checked = ncDraft.groupChat;
+    $("ncGroupPanel").hidden = !ncDraft.groupChat;
+    renderNcGroup();
+  }
+
+  let roleProfileDraft = {};
+  let roleProfileActiveId = null;
+
+  function initRoleDraft() {
+    roleProfileDraft = {};
+    for (const r of ROLE_PRESETS) {
+      roleProfileDraft[r.id] = getRoleProfile(r.id);
+    }
+  }
+
+  function loadRoleForm() {
+    const id = roleProfileActiveId;
+    const p = (id && roleProfileDraft[id]) || getRoleProfile(id);
+    $("setSystemPrompt").value = p.prompt || "";
+    $("setVoiceTop").value = p.voice || state.settings.voice;
+    $("setTemperature").value = p.temperature;
+    $("tempVal").textContent = Number(p.temperature).toFixed(1);
+    $("setSpeed").value = p.speed;
+    $("speedVal").textContent = Number(p.speed).toFixed(1);
+    $("setPitch").value = p.pitch;
+    $("pitchVal").textContent = Number(p.pitch).toFixed(0);
+    $("setVol").value = p.vol;
+    $("volVal").textContent = Number(p.vol).toFixed(1);
+  }
+
+  function saveRoleDraft() {
+    const id = roleProfileActiveId;
+    if (!id || !roleProfileDraft[id]) return;
+    roleProfileDraft[id] = {
+      prompt: $("setSystemPrompt").value,
+      voice: $("setVoiceTop").value,
+      temperature: Number($("setTemperature").value),
+      speed: Number($("setSpeed").value),
+      pitch: Number($("setPitch").value),
+      vol: Number($("setVol").value)
+    };
+  }
+
+  function renderNcGroup() {
+    const list = $("ncGroupRoleList");
+    const roles = ncDraft.groupRoles.filter(id => ROLE_PRESETS.some(r => r.id === id));
+    if (!roles.length) {
+      list.innerHTML = '<div class="group-empty">还没有添加角色，点下方「＋ 添加」加入。</div>';
+    } else {
+      list.innerHTML = roles.map(id => {
+        const preset = ROLE_PRESETS.find(r => r.id === id);
+        return '<div class="group-role-item"><span>' + escapeHtml(preset ? preset.name : id) +
+          '</span><button class="rm" data-role="' + id + '" type="button" title="移除">✕</button></div>';
+      }).join("");
+    }
+    const remaining = ROLE_PRESETS.filter(r => !roles.includes(r.id));
+    $("ncRolePicker").innerHTML = remaining.length
+      ? remaining.map(r => '<option value="' + r.id + '">' + r.name + '</option>').join("")
+      : '<option value="">没有更多角色</option>';
+    $("ncRolePicker").disabled = !remaining.length;
+    $("ncAddRoleBtn").disabled = !remaining.length;
+  }
+
+  function openNewChatSettings() {
+    fillNewChatSettings();
+    $("ncOverlay").classList.add("open");
+    sidebar.classList.remove("open");
+  }
+
+  function closeNewChatSettings() {
+    $("ncOverlay").classList.remove("open");
+  }
+
+  function saveNewChatSettings() {
+    state.settings.defaultRole = $("ncDefaultRole").value;
+    state.settings.groupChat = $("ncGroupChat").checked;
+    state.settings.groupRoles = ncDraft.groupRoles.slice();
+    save();
+    closeNewChatSettings();
+  }
+
   function openSettings() {
     const s = state.settings;
     $("setBaseUrl").value = s.baseUrl;
@@ -1414,17 +1859,10 @@
     $("setModel").value = s.model;
     $("setStream").checked = s.stream !== false;
     $("setAutoSpeak").checked = s.autoSpeak !== false;
-    const p = activeParams();
-    $("setRole").value = p.role || PARAM_DEFAULTS.role;
-    $("setSystemPrompt").value = p.prompt;
-    $("setTemperature").value = p.temperature;
-    $("tempVal").textContent = Number(p.temperature).toFixed(1);
-    $("setSpeed").value = p.speed;
-    $("speedVal").textContent = Number(p.speed).toFixed(1);
-    $("setPitch").value = p.pitch;
-    $("pitchVal").textContent = Number(p.pitch).toFixed(0);
-    $("setVol").value = p.vol;
-    $("volVal").textContent = Number(p.vol).toFixed(1);
+    initRoleDraft();
+    roleProfileActiveId = state.settings.defaultRole || PARAM_DEFAULTS.role;
+    $("setRole").value = roleProfileActiveId;
+    loadRoleForm();
     $("overlay").classList.add("open");
     sidebar.classList.remove("open");
   }
@@ -1443,16 +1881,9 @@
     state.settings.model = $("setModel").value.trim() || "deepseek-chat";
     state.settings.stream = $("setStream").checked;
     state.settings.autoSpeak = $("setAutoSpeak").checked;
-    const conv = getActive();
-    if (conv) {
-      const p = getConvParams(conv);
-      p.role = $("setRole").value;
-      p.prompt = $("setSystemPrompt").value;
-      p.temperature = Number($("setTemperature").value);
-      p.speed = Number($("setSpeed").value);
-      p.pitch = Number($("setPitch").value);
-      p.vol = Number($("setVol").value);
-    }
+    saveRoleDraft();
+    state.settings.roleProfiles = roleProfileDraft;
+    state.settings.defaultRole = roleProfileActiveId;
     save();
     closeSettings();
     location.reload();
@@ -1461,12 +1892,14 @@
   /* ---------- speech ---------- */
   let currentAudio = null;
   let synthKeepAlive = null;
+  let autoSpeakActive = false;
 
   function clearKeepAlive() {
     if (synthKeepAlive) { clearInterval(synthKeepAlive); synthKeepAlive = null; }
   }
 
   function stopAudio() {
+    autoSpeakActive = false;
     clearKeepAlive();
     if ("speechSynthesis" in window) window.speechSynthesis.cancel();
     if (currentAudio) {
@@ -1497,8 +1930,11 @@
     return audio.play();
   }
 
-  async function miniMaxTts(text, voice) {
+  async function miniMaxTts(text, voice, spd, pit, vol) {
     const p = activeParams();
+    const speed = (spd != null) ? spd : p.speed;
+    const pitch = (pit != null) ? pit : p.pitch;
+    const volVal = (vol != null) ? vol : p.vol;
     const resp = await fetch("https://api.minimaxi.com/v1/t2a_v2", {
       method: "POST",
       headers: {
@@ -1511,9 +1947,9 @@
         stream: false,
         voice_setting: {
           voice_id: voice,
-          speed: Number(p.speed) || 1.0,
-          vol: Number(p.vol) || 1.0,
-          pitch: Number(p.pitch) || 0
+          speed: Number(speed) || 1.0,
+          vol: Number(volVal) || 1.0,
+          pitch: Number(pitch) || 0
         },
         audio_setting: { sample_rate: 32000, bitrate: 128000, format: "mp3", channel: 1 }
       })
@@ -1546,6 +1982,85 @@
       .trim();
   }
 
+  function playSpeech(text, opts, btn) {
+    return new Promise((resolve) => {
+      const o = opts || {};
+      const voice = o.voice || state.settings.voice;
+      const spd = (o.speed != null) ? o.speed : 1.0;
+      const pit = (o.pitch != null) ? o.pitch : 0;
+      const vol = (o.vol != null) ? o.vol : 1.0;
+
+      if (state.settings.ttsUrl || state.settings.minimaxKey) {
+        (async () => {
+          try {
+            let blob;
+            if (state.settings.ttsUrl) {
+              const resp = await fetch(state.settings.ttsUrl.replace(/\/+$/, ""), {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text, voice, speed: spd, pitch: pit, vol })
+              });
+              if (!resp.ok) throw new Error("HTTP " + resp.status);
+              blob = await resp.blob();
+            } else {
+              blob = await miniMaxTts(text, voice, spd, pit, vol);
+            }
+            const url = URL.createObjectURL(blob);
+            const audio = new Audio(url);
+            currentAudio = audio;
+            if (btn) btn.textContent = "⏹ 停止";
+            audio.onended = () => { currentAudio = null; URL.revokeObjectURL(url); if (btn) btn.textContent = "🔊 播放"; resolve(); };
+            audio.onerror = () => { currentAudio = null; URL.revokeObjectURL(url); if (btn) btn.textContent = "🔊 播放"; resolve(); };
+            audio.play();
+          } catch (e) {
+            if (btn) btn.textContent = "🔊 播放";
+            reject(e);
+          }
+        })();
+      } else if ("speechSynthesis" in window) {
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = "zh-CN";
+        u.rate = Math.min(2, Math.max(0.5, Number(spd) || 1));
+        u.pitch = Math.min(2, Math.max(0, 1 + (Number(pit) || 0) / 24));
+        u.volume = Math.min(1, Math.max(0.1, Number(vol) || 1));
+        const v = bestSystemVoice();
+        if (v) u.voice = v;
+        if (btn) btn.textContent = "⏹ 停止";
+        u.onend = () => { clearKeepAlive(); if (btn) btn.textContent = "🔊 播放"; resolve(); };
+        u.onerror = () => { clearKeepAlive(); if (btn) btn.textContent = "🔊 播放"; resolve(); };
+        window.speechSynthesis.speak(u);
+      } else {
+        resolve();
+      }
+    });
+  }
+
+  async function speakSequence(startIdx) {
+    const conv = getActive();
+    if (!conv) return;
+    autoSpeakActive = true;
+    for (let i = startIdx; i < conv.messages.length; i++) {
+      if (!autoSpeakActive) break;
+      const m = conv.messages[i];
+      if (!m || m.role !== "assistant") continue;
+      const text = stripActions(cleanNamePrefix(m));
+      if (!text) continue;
+      const profile = m.roleId ? getRoleProfile(m.roleId) : null;
+      const opts = profile
+        ? { voice: profile.voice, speed: profile.speed, pitch: profile.pitch, vol: profile.vol }
+        : { voice: state.settings.voice, speed: activeParams().speed, pitch: activeParams().pitch, vol: activeParams().vol };
+      const btn = messagesInner.querySelector('.msg[data-msg-index="' + i + '"] .speak-btn');
+      if (btn) btn.textContent = "🔊 播放中";
+      try {
+        await playSpeech(text, opts);
+      } catch (_) {
+        // 单条合成失败则跳过，继续播下一条
+      }
+      if (btn) btn.textContent = "🔊 播放";
+    }
+    autoSpeakActive = false;
+  }
+
   async function handleSpeak(btn) {
     const msgEl = btn.closest(".msg.assistant");
     const raw = (msgEl.querySelector(".content").textContent || "").trim();
@@ -1556,60 +2071,24 @@
       ("speechSynthesis" in window && window.speechSynthesis.speaking);
     if (speaking) { stopAudio(); return; }
 
-    if (state.settings.ttsUrl || state.settings.minimaxKey) {
-      btn.textContent = "⏳ 合成中…";
-      try {
-        let blob;
-        if (state.settings.ttsUrl) {
-          const p = activeParams();
-          const resp = await fetch(state.settings.ttsUrl.replace(/\/+$/, ""), {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              text,
-              voice: state.settings.voice,
-              speed: p.speed,
-              pitch: p.pitch,
-              vol: p.vol
-            })
-          });
-          if (!resp.ok) {
-            const err = await resp.text().catch(() => "");
-            throw new Error("HTTP " + resp.status + (err ? " · " + err.slice(0, 160) : ""));
-          }
-          blob = await resp.blob();
-        } else {
-          blob = await miniMaxTts(text, state.settings.voice);
-        }
-        await playAudioBlob(blob, btn);
-      } catch (e) {
-        btn.textContent = "🔊 播放";
-        alert("语音合成失败：" + (e && e.message ? e.message : e));
-      }
-      return;
-    }
-
-    if (!("speechSynthesis" in window)) {
+    if (!state.settings.ttsUrl && !state.settings.minimaxKey && !("speechSynthesis" in window)) {
       alert("当前浏览器不支持本地语音，请在「设置」中配置语音服务地址");
       return;
     }
-    clearKeepAlive();
-    const p = activeParams();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = "zh-CN";
-    u.rate = Math.min(2, Math.max(0.5, Number(p.speed) || 1));
-    u.pitch = Math.min(2, Math.max(0, 1 + (Number(p.pitch) || 0) / 24));
-    u.volume = Math.min(1, Math.max(0.1, Number(p.vol) || 1));
-    const v = bestSystemVoice();
-    if (v) u.voice = v;
-    btn.textContent = "⏹ 停止";
-    u.onend = () => { clearKeepAlive(); btn.textContent = "🔊 播放"; };
-    u.onerror = () => { clearKeepAlive(); btn.textContent = "🔊 播放"; };
-    synthKeepAlive = setInterval(() => {
-      if (window.speechSynthesis.speaking) { window.speechSynthesis.pause(); window.speechSynthesis.resume(); }
-      else clearKeepAlive();
-    }, 14000);
-    window.speechSynthesis.speak(u);
+
+    const roleId = msgEl.getAttribute("data-role");
+    const profile = roleId ? getRoleProfile(roleId) : null;
+    const opts = profile
+      ? { voice: profile.voice, speed: profile.speed, pitch: profile.pitch, vol: profile.vol }
+      : { voice: state.settings.voice, speed: activeParams().speed, pitch: activeParams().pitch, vol: activeParams().vol };
+
+    btn.textContent = "⏳ 合成中…";
+    try {
+      await playSpeech(text, opts, btn);
+    } catch (e) {
+      btn.textContent = "🔊 播放";
+      alert("语音合成失败：" + (e && e.message ? e.message : e));
+    }
   }
 
   /* ---------- events ---------- */
@@ -1630,6 +2109,26 @@
       $("input").focus();
     });
 
+    $("newChatMoreBtn").addEventListener("click", openNewChatSettings);
+    $("ncCancel").addEventListener("click", closeNewChatSettings);
+    $("ncSave").addEventListener("click", saveNewChatSettings);
+    $("ncGroupChat").addEventListener("change", () => {
+      $("ncGroupPanel").hidden = !$("ncGroupChat").checked;
+    });
+    $("ncAddRoleBtn").addEventListener("click", () => {
+      const val = $("ncRolePicker").value;
+      if (val && !ncDraft.groupRoles.includes(val)) {
+        ncDraft.groupRoles.push(val);
+        renderNcGroup();
+      }
+    });
+    $("ncGroupRoleList").addEventListener("click", (e) => {
+      const btn = e.target.closest(".rm");
+      if (!btn) return;
+      ncDraft.groupRoles = ncDraft.groupRoles.filter(id => id !== btn.dataset.role);
+      renderNcGroup();
+    });
+
     $("sendBtn").addEventListener("click", () => {
       if (state.isStreaming) {
         state.abortController?.abort();
@@ -1638,6 +2137,7 @@
       const text = $("input").value.trim();
       if (text) sendMessage(text);
     });
+    $("continueBtn").addEventListener("click", continueChat);
 
     const input = $("input");
     input.addEventListener("keydown", (e) => {
@@ -1696,29 +2196,25 @@
       $("pitchVal").textContent = Number(PARAM_DEFAULTS.pitch).toFixed(0);
       $("setVol").value = PARAM_DEFAULTS.vol;
       $("volVal").textContent = Number(PARAM_DEFAULTS.vol).toFixed(1);
+      state.settings.roleProfiles = {};
+      initRoleDraft();
+      roleProfileActiveId = $("setRole").value;
+      loadRoleForm();
     });
     $("setTemperature").addEventListener("input", (e) => {
       $("tempVal").textContent = Number(e.target.value).toFixed(1);
+      saveRoleDraft();
     });
-    $("setSpeed").addEventListener("input", (e) => { $("speedVal").textContent = Number(e.target.value).toFixed(1); });
-    $("setPitch").addEventListener("input", (e) => { $("pitchVal").textContent = Number(e.target.value).toFixed(0); });
-    $("setVol").addEventListener("input", (e) => { $("volVal").textContent = Number(e.target.value).toFixed(1); });
+    $("setSpeed").addEventListener("input", (e) => { $("speedVal").textContent = Number(e.target.value).toFixed(1); saveRoleDraft(); });
+    $("setPitch").addEventListener("input", (e) => { $("pitchVal").textContent = Number(e.target.value).toFixed(0); saveRoleDraft(); });
+    $("setVol").addEventListener("input", (e) => { $("volVal").textContent = Number(e.target.value).toFixed(1); saveRoleDraft(); });
+    $("setSystemPrompt").addEventListener("input", saveRoleDraft);
     $("setRole").addEventListener("change", () => {
-      const preset = ROLE_PRESETS.find(r => r.id === $("setRole").value);
-      if (preset) {
-        $("setSystemPrompt").value = preset.prompt;
-        if (preset.voice) {
-          $("setVoice").value = preset.voice;
-          $("setVoiceTop").value = preset.voice;
-        }
-      }
+      saveRoleDraft();
+      roleProfileActiveId = $("setRole").value;
+      loadRoleForm();
     });
-    $("setVoice").addEventListener("change", () => {
-      $("setVoiceTop").value = $("setVoice").value;
-    });
-    $("setVoiceTop").addEventListener("change", () => {
-      $("setVoice").value = $("setVoiceTop").value;
-    });
+    $("setVoiceTop").addEventListener("change", saveRoleDraft);
     $("tempHelpBtn").addEventListener("click", () => {
       $("tempHelp").classList.toggle("show");
     });

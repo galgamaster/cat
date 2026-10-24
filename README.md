@@ -1,18 +1,10 @@
 # AI 聊天平台 · 部署说明
 
-这是一个纯前端的单文件聊天应用（`index.html`），默认接入 DeepSeek。打开即用，无需构建。
+这是一个纯前端的单文件聊天应用（`index.html`），默认接入 DeepSeek，语音走 MiniMax。打开即用，无需构建。
 
 ## 一、本地体验
 
-直接双击 `index.html` 用浏览器打开即可。当前文件已预填默认 Key，打开即可对话；如需更换，点击右上角「⚙ 设置」，填入：
-
-- 接口地址：`https://api.deepseek.com`
-- API Key：`sk-...`（你的 DeepSeek Key）
-- 模型：`deepseek-chat`（普通对话）或 `deepseek-reasoner`（深度推理）
-
-Key 只保存在你自己的浏览器本地（localStorage），不会上传到别处。
-
-> 注意：当前 `index.html` 源码里已写入了你的 API Key，仅适合本地使用；公开部署前务必改用第三节的代理方案并轮换 Key。
+直接双击 `index.html` 用浏览器打开即可。MiniMax 语音 Key 已内置，打开后语音就能直接合成；DeepSeek 对话需要先按第三节配好网关（或临时填一个 DeepSeek Key）。
 
 ## 二、部署成在线网站
 
@@ -22,24 +14,32 @@ Key 只保存在你自己的浏览器本地（localStorage），不会上传到�
 - Vercel / Netlify：把仓库根目录作为发布目录
 - GitHub Pages：把 `index.html` 放到仓库根目录
 
-## 三、上线前务必处理 API Key 安全（重要）
+## 三、把 DeepSeek Key 放入 Cloudflare AI Gateway（防窃取，推荐）
 
-如果你把 DeepSeek API Key 直接填进前端「设置」里再公开部署，任何访客都能从浏览器抓到这个 Key，然后盗刷你的额度。**正式上线请使用服务端代理**，把 Key 藏在服务端。本目录已提供 `worker.js`。
+真实 DeepSeek Key 不放进前端，而是存到 Cloudflare 的 AI Gateway，前端只用一个可随时撤销的「网关 Token」。
 
-### 用 Cloudflare Worker 代理（推荐）
+1. 登录 Cloudflare 控制台，进入 AI → AI Gateway，创建一个网关（记住网关名，例如 `liya`）。
+2. 在网关页找到 Provider Keys 区域，点 Add API Key：
+   - Provider 下拉选 DeepSeek
+   - 粘贴你的 DeepSeek Key（就是你之前给我的那把 sk- 开头的 DeepSeek Key）
+   - 保存。
+3. 进入该网关的 Settings，点 Create authentication token，生成网关 Token（只显示一次，先复制保存）；然后返回 Settings，打开 Authenticated Gateway 开关。
+4. 记下网关地址，格式：
+   `https://gateway.ai.cloudflare.com/v1/{你的账户ID}/{网关名}/deepseek`
+   账户 ID 可在 Cloudflare 控制台首页右侧的账户信息里看到。
+5. 回到网页「设置 → 更多设置」：
+   - 接口地址（Base URL）= 第 4 步的网关地址
+   - API Key / 网关令牌 = 第 3 步生成的网关 Token
+   - MiniMax 语音 Key 保持内置值即可（语音仍直连 MiniMax）。
 
-1. 登录 Cloudflare 控制台，进入 Workers & Pages，创建一个 Worker。
-2. 把 `worker.js` 的内容粘贴进去并部署。
-3. 在 Worker 的「设置 → Variables and Secrets」里添加 Secret：`DEEPSEEK_API_KEY`，值为你的 Key。
-4. 拿到 Worker 的地址，形如 `https://your-worker.workers.dev`。
-5. 回到网页「设置」，把「代理地址」填成这个地址，API Key 留空，模型照常填 `deepseek-chat`。
+这样访客只能看到网关 Token，看不到你的 DeepSeek Key；Token 泄露后去 Cloudflare 删掉重发即可。建议再给网关开 Rate Limiting 限流。
 
-这样前端不再接触 Key，Key 只在 Cloudflare 服务端使用。
+备选：本目录的 `gateway.js` 是一个自定义 Worker，可同时代理 DeepSeek 对话和 MiniMax 语音，Key 用 Workers Secret 保存。想走这条路线时告诉我，我帮你把前端切到对应代理模式。
 
 ## 四、其他说明
 
 - 聊天记录保存在访客自己的浏览器里，换设备/清缓存会丢失。
-- 如需多用户、历史同步、计费等，可以在这个基础上加一个后端或数据库。
+- 如需多用户、历史同步、计费等，可以在这个基础上加后端和数据库。
 - 前端没有引入任何第三方 CDN 依赖，完全离线可用。
 
 ## 五、语音输出
@@ -47,10 +47,4 @@ Key 只保存在你自己的浏览器本地（localStorage），不会上传到�
 每条猫娘回复下方有「🔊 播放」按钮。有两种模式：
 
 - **本地语音（默认）**：没填语音服务地址时，用浏览器/系统的中文语音朗读。Windows 11 自带「晓晓·在线自然」等神经语音，效果较自然；其它设备可能退回机械音。
-- **自然人声（推荐上线用）**：在「设置 → 语音服务地址」填入一个 TTS 代理地址，由服务端合成真人感音频返回。本目录提供 `tts-worker.js`（MiniMax 海螺语音，中文自然度更好）：
-
-1. 在 Cloudflare 创建 Worker，粘贴 `tts-worker.js` 并部署。
-2. 在 Variables and Secrets 添加 `MINIMAX_API_KEY`，值为你的 MiniMax Key（注意账户需有余额或免费额度）。
-3. 把 Worker 地址填进网页「设置 → 语音服务地址」，语音角色默认 `Chinese (Mandarin)_Cute_Spirit`（活泼·元气精灵），也可换成 `Chinese (Mandarin)_Crisp_Girl`（清脆开朗）、`qiaopi_mengmei`（萝莉·俏皮萌妹）等。
-
-这样前端不接触语音 Key，访客点击播放时由服务端合成后返回音频。
+- **自然人声（推荐上线用）**：在「设置 → 语音服务地址」填入网关的 `/tts` 地址，由服务端合成 MiniMax 少女音返回。音色可在「当前对话专属设置」或「更多设置」里切换。
